@@ -1,101 +1,359 @@
 <!doctype html><html lang="th"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Givetome</title><link rel="manifest" href="/manifest.webmanifest">
-<meta name="theme-color" content="#14532d"><meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#f5f6f4" media="(prefers-color-scheme: light)"><meta name="theme-color" content="#0f1311" media="(prefers-color-scheme: dark)">
+<meta name="color-scheme" content="light dark"><meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Givetome"><link rel="apple-touch-icon" href="/icon-180.png">
-<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@400;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
-:root{--g:#14532d;--g2:#dcfce7;--bg:#f4f5f4;--t:#1a1a1a;--m:#6b7280;--r:#b91c1c}
-@media(prefers-color-scheme:dark){:root{--bg:#111;--t:#eee;--m:#9ca3af;--g2:#14301f}body{background:var(--bg)}.card,dialog,input,select{background:#1c1c1c!important;color:var(--t)!important}}
-*{box-sizing:border-box}body{margin:0;font-family:'Noto Sans Thai',system-ui,sans-serif;background:var(--bg);color:var(--t);padding-top:env(safe-area-inset-top);padding-bottom:calc(72px + env(safe-area-inset-bottom))}
-header{background:var(--g);color:#fff;padding:14px 16px;font-weight:600;font-size:18px}
-main{padding:12px;max-width:640px;margin:auto}.card{background:#fff;border-radius:14px;padding:14px;margin-bottom:12px;box-shadow:0 1px 3px #0001}
-.big{font-size:26px;font-weight:600;color:var(--g)}.m{color:var(--m);font-size:13px}.row{display:flex;justify-content:space-between;gap:8px;align-items:center;padding:8px 0;border-bottom:1px solid #0001}
-.in{color:var(--g)}.out{color:var(--r)}
-nav{position:fixed;bottom:0;left:0;right:0;display:flex;background:#fff;border-top:1px solid #0002;padding-bottom:env(safe-area-inset-bottom)}
-nav button{flex:1;border:0;background:none;padding:12px 4px;font:inherit;font-size:13px;color:var(--m)}nav button.on{color:var(--g);font-weight:600}
-.fab{position:fixed;right:16px;bottom:calc(76px + env(safe-area-inset-bottom));width:56px;height:56px;border-radius:50%;border:0;background:var(--g);color:#fff;font-size:30px;box-shadow:0 3px 8px #0004}
-input,select,button.b{width:100%;padding:12px;margin:5px 0;border:1px solid #0003;border-radius:10px;font:inherit;font-size:16px}
-button.b{background:var(--g);color:#fff;border:0}button.s{background:none;color:var(--g);border:1px solid var(--g)}
-dialog{border:0;border-radius:16px;width:92%;max-width:420px;padding:16px}dialog::backdrop{background:#0006}
-#toast{position:fixed;top:calc(8px + env(safe-area-inset-top));left:50%;transform:translateX(-50%);background:#222;color:#fff;padding:10px 16px;border-radius:20px;display:none;z-index:9}
-#off{display:none;background:#b45309;color:#fff;text-align:center;padding:6px;font-size:13px}.hide{display:none!important}
+:root{--bg:#f5f6f4;--sf:#fff;--ink:#15201b;--mute:#69736d;--line:#e3e7e4;--ac:#1d6b4f;--acs:#e4f0ea;--out:#b5473a;--warn:#b7791f;--sh:0 -8px 30px #0002;
+ --f:'IBM Plex Sans Thai','Noto Sans Thai',system-ui,sans-serif}
+@media(prefers-color-scheme:dark){:root{--bg:#0f1311;--sf:#171c19;--ink:#e8ece9;--mute:#8d9792;--line:#262d29;--ac:#5db28d;--acs:#1b2b24;--out:#e07a6c;--warn:#e0b04a;--sh:0 -8px 30px #0008}}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html{background:var(--bg)}body{margin:0;font:400 16px/1.5 var(--f);background:var(--bg);color:var(--ink);padding-bottom:calc(84px + env(safe-area-inset-bottom));font-variant-numeric:tabular-nums}
+button,input,select{font:inherit;color:inherit}button{cursor:pointer}.hide{display:none!important}
+:focus-visible{outline:2px solid var(--ac);outline-offset:2px}
+.wrap{max-width:560px;margin:auto;padding:0 18px}
+/* หัวหน้า */
+#bar{position:sticky;top:0;z-index:5;background:var(--bg);padding:calc(10px + env(safe-area-inset-top)) 0 8px}
+#bar .wrap{display:flex;align-items:center;gap:6px;min-height:40px}
+#ttl{font-size:20px;font-weight:600;margin:0;flex:1;letter-spacing:-.01em}
+.ib{border:0;background:none;width:40px;height:40px;border-radius:50%;display:grid;place-items:center;color:var(--ink);margin-left:-10px}
+.ib:active{background:var(--line)}
+#off{background:var(--warn);color:#fff;text-align:center;font-size:14px;padding:6px 12px;font-weight:500}
+body:not(.offline) #off{display:none}
+/* เนื้อหา */
+h2{font-size:14px;font-weight:600;color:var(--mute);margin:26px 0 6px}
+.hero{padding:14px 0 4px}.hero .l{color:var(--mute);font-size:14px}
+.hero .n{font-size:44px;font-weight:600;letter-spacing:-.03em;line-height:1.15}.hero .n small{font-size:22px;color:var(--mute);font-weight:500}
+.meter{height:4px;border-radius:4px;background:var(--line);overflow:hidden;margin:10px 0 6px}.meter i{display:block;height:100%;background:var(--ac);border-radius:4px}
+.meter.over i{background:var(--out)}.meter.near i{background:var(--warn)}
+.m{color:var(--mute);font-size:14px}.in{color:var(--ac)}.out{color:var(--out)}.warn{color:var(--warn)}
+.list{background:var(--sf);border-radius:16px;overflow:hidden}
+.row{display:flex;align-items:center;gap:12px;padding:13px 16px;width:100%;text-align:left;background:none;border:0;border-top:1px solid var(--line)}
+.row:first-child{border-top:0}button.row:active{background:var(--bg)}
+.row .t{flex:1;min-width:0}.row .t b{font-weight:500;display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.row .t span{display:block}
+.row .a{font-weight:500;white-space:nowrap;text-align:right}.row .a small{display:block;font-weight:400;color:var(--mute);font-size:13px}
+.row .chev{color:var(--mute);margin-right:-4px}.void{opacity:.45;text-decoration:line-through}
+.day{font-size:13px;color:var(--mute);margin:18px 2px 6px}
+.empty{background:var(--sf);border-radius:16px;padding:22px 18px;text-align:center;color:var(--mute)}.empty b{color:var(--ink);display:block;margin-bottom:4px}
+.empty .btn{margin-top:14px}
+.err{background:var(--sf);border-radius:16px;padding:16px;color:var(--out)}
+/* ปุ่ม/ฟอร์ม */
+.btn{display:block;width:100%;border:0;border-radius:12px;padding:13px 16px;background:var(--ac);color:#fff;font-weight:500;text-align:center;margin-top:10px}
+.btn.ghost{background:none;color:var(--ac);box-shadow:inset 0 0 0 1px var(--line)}.btn.danger{color:var(--out)}.btn.danger.armed{background:var(--out);color:#fff;box-shadow:none}
+.btn.sm{display:inline-block;width:auto;padding:7px 14px;margin:0;font-size:14px}
+input,select{width:100%;padding:12px 14px;margin:5px 0;border:1px solid var(--line);border-radius:12px;background:var(--sf);font-size:16px}
+input:focus,select:focus{border-color:var(--ac);outline:0}.amt{font-size:32px;font-weight:600;border:0;background:none;padding:6px 0;letter-spacing:-.02em}
+.f{display:block;margin-top:6px}.f>span{font-size:13px;color:var(--mute)}.f select,.f input{margin-top:2px}
+.seg{display:flex;background:var(--bg);border-radius:12px;padding:3px;gap:2px;margin:4px 0 8px}.seg button{flex:1;border:0;background:none;padding:8px 4px;border-radius:10px;color:var(--mute);font-size:15px}
+.seg button.on{background:var(--sf);color:var(--ink);font-weight:500;box-shadow:0 1px 2px #0002}
+.step{display:flex;align-items:center;justify-content:space-between;margin:4px 0 10px}.step b{font-weight:600}
+.chk{width:26px;height:26px;border-radius:50%;border:1.5px solid var(--mute);background:none;display:grid;place-items:center;flex:none;padding:0;color:#fff}
+.chk.paid{background:var(--ac);border-color:var(--ac)}.chk.partial{border-color:var(--warn);background:linear-gradient(90deg,var(--warn) 50%,transparent 50%)}
+.chk svg{display:none}.chk.paid svg{display:block}
+.legend{display:flex;align-items:center;gap:10px;font-size:15px;padding:5px 0}.legend i{width:10px;height:10px;border-radius:3px;flex:none}.legend span{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.card{background:var(--sf);border-radius:16px;padding:16px}.card+.card{margin-top:10px}
+.tog{display:flex;align-items:center;justify-content:space-between;padding:6px 0}
+/* ปุ่มเพิ่ม + แท็บล่าง */
+#fab{position:fixed;right:max(18px,calc(50% - 262px));bottom:calc(76px + env(safe-area-inset-bottom));width:52px;height:52px;border-radius:50%;border:0;background:var(--ac);color:#fff;display:grid;place-items:center;box-shadow:0 4px 14px #0003}
+@media(prefers-color-scheme:dark){#fab{color:#0b1410}}
+nav{position:fixed;bottom:0;left:0;right:0;background:var(--sf);border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom);z-index:6}
+nav .wrap{display:flex;padding:0 6px}nav button{flex:1;border:0;background:none;padding:9px 2px 8px;font-size:12px;color:var(--mute);display:flex;flex-direction:column;align-items:center;gap:2px}
+nav button.on{color:var(--ac);font-weight:600}
+/* bottom sheet */
+dialog{border:0;padding:18px 18px calc(20px + env(safe-area-inset-bottom));background:var(--sf);color:var(--ink);width:100%;max-width:560px;margin:auto auto 0;border-radius:22px 22px 0 0;max-height:92vh;box-shadow:var(--sh)}
+dialog::backdrop{background:#0006}dialog h3{margin:2px 0 8px;font-size:19px;font-weight:600}
+.grab{width:36px;height:4px;border-radius:4px;background:var(--line);margin:-6px auto 12px}
+.offnote{display:none;color:var(--warn);font-size:14px;margin-top:8px}.offline .offnote{display:block}
+.save .offl{display:none}.offline .save{background:var(--line);color:var(--mute);pointer-events:none}.offline .save .onl{display:none}.offline .save .offl{display:inline}
+#toast{position:fixed;left:50%;top:calc(12px + env(safe-area-inset-top));transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:999px;font-size:15px;z-index:20;max-width:90%;text-align:center}
+/* login */
+#auth{min-height:100vh;display:flex;flex-direction:column;justify-content:center;padding:28px 0}#auth h1{font-size:30px;margin:0;letter-spacing:-.02em}
+@media(prefers-reduced-motion:no-preference){dialog[open]{animation:up .18s ease-out}@keyframes up{from{transform:translateY(24px);opacity:.6}}}
 </style></head><body>
-<div id="toast"></div><div id="off">ออฟไลน์ — จะบันทึกรายการไม่ได้จนกว่าจะเชื่อมต่อ</div>
-<section id="auth" class="hide"><header>Givetome</header><main><div class="card">
-<p class="m" id="amsg">เข้าสู่ระบบ</p><input id="em" type="email" placeholder="อีเมล" autocomplete="username">
-<input id="pw" type="password" placeholder="รหัสผ่าน (อย่างน้อย 10 ตัวอักษร)" autocomplete="current-password">
-<button class="b" id="login">เข้าสู่ระบบ</button><button class="b s" id="reg">สร้างบัญชีผู้ดูแล (ครั้งแรกเท่านั้น)</button></div></main></section>
-<section id="app" class="hide"><header id="ttl"></header><main id="v"></main>
-<button class="fab" id="add" aria-label="เพิ่มรายการ">+</button>
-<nav><button data-v="dash">ภาพรวม</button><button data-v="txs">สมุดบัญชี</button><button data-v="ana">วิเคราะห์</button><button data-v="accts">บัญชี</button><button data-v="set">ตั้งค่า</button></nav></section>
-<dialog id="dlg"><form method="dialog" id="f"><h3 style="margin:0 0 6px;color:var(--g)">เพิ่มรายการ</h3>
-<select id="ty"><option value="EXPENSE">รายจ่าย</option><option value="INCOME">รายรับ (เงินเดือน/โบนัส)</option><option value="TRANSFER">โอน/เติมเงินระหว่างบัญชี</option></select>
-<input id="ti" placeholder="ชื่อรายการ เช่น เงินเดือน, ค่าห้อง" required maxlength="120">
-<input id="am" inputmode="decimal" placeholder="จำนวนเงิน (บาท)" required><input id="ct" list="cl" placeholder="หมวดหมู่ เช่น อาหาร, เดินทาง" maxlength="60"><datalist id="cl"><option>อาหาร</option><option>เดินทาง</option><option>ค่าห้อง/น้ำไฟ</option><option>ค่าโทรศัพท์/เน็ต</option><option>ซื้อของ</option><option>ผ่อนหนี้</option><option>ความบันเทิง</option><option>สุขภาพ</option><option>การเรียน</option><option>เงินออม</option><option>เงินเดือน</option><option>อื่น ๆ</option></datalist><input id="nt" placeholder="โน้ต: จ่ายอะไร ที่ไหน จ่ายด้วยวิธีไหน" maxlength="500">
-<select id="fa"></select><select id="ta"></select><input id="dt" type="datetime-local" required>
-<button class="b" id="sv" type="submit">บันทึก</button><button class="b s" type="button" id="cx">ยกเลิก</button></form></dialog>
+<div id="toast" class="hide" role="status"></div>
+<div id="off" role="alert">ออฟไลน์ — บันทึกไม่ได้จนกว่าจะเชื่อมต่ออีกครั้ง</div>
+
+<section id="auth" class="hide"><div class="wrap">
+ <h1>Givetome</h1><p class="m" style="margin:2px 0 22px">สมุดบัญชีส่วนตัว บันทึกรายรับ รายจ่าย และวางแผนเงินในที่เดียว</p>
+ <div class="seg"><button type="button" data-a="authMode" data-m="login" class="on" id="m-login">เข้าสู่ระบบ</button><button type="button" data-a="authMode" data-m="register" id="m-register">สมัครใช้งาน</button></div>
+ <input id="em" type="email" placeholder="อีเมล" autocomplete="username"><input id="pw" type="password" placeholder="รหัสผ่าน อย่างน้อย 10 ตัวอักษร" autocomplete="current-password">
+ <button class="btn save" id="go" data-a="authGo"><span class="onl">เข้าสู่ระบบ</span><span class="offl">ออฟไลน์</span></button>
+ <p class="m" id="ahint" style="margin-top:14px">ข้อมูลของแต่ละบัญชีแยกจากกัน คนอื่นมองไม่เห็นรายการของคุณ</p>
+</div></section>
+
+<section id="app" class="hide">
+ <header id="bar"><div class="wrap"><button class="ib hide" id="back" data-a="back" aria-label="ย้อนกลับ"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></button><h1 id="ttl"></h1><span id="act"></span></div></header>
+ <main class="wrap" id="v"></main>
+ <button id="fab" data-a="add" aria-label="เพิ่มรายการ"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></button>
+ <nav><div class="wrap" id="tabs"></div></nav>
+</section>
+<dialog id="sheet"></dialog>
+
 <script>
-const $=id=>document.getElementById(id),esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const fmt=s=>Number(s).toLocaleString('th-TH',{minimumFractionDigits:2,maximumFractionDigits:2}),TL={INCOME:'รายรับ',EXPENSE:'รายจ่าย',TRANSFER:'โอน',REFUND:'รับคืน',ADJUST:'ปรับยอด'};
-let per='m',view='dash',accts=[],tot={income:'0',expense:'0'},busy=false;
-function toast(m){const t=$('toast');t.textContent=m;t.style.display='block';setTimeout(()=>t.style.display='none',3000)}
-async function api(p,m='GET',b){if(!navigator.onLine)throw Error('ออฟไลน์ ไม่สามารถบันทึกได้');
- const r=await fetch(p,{method:m,credentials:'same-origin',headers:b?{'Content-Type':'application/json'}:{},body:b?JSON.stringify(b):undefined});
- if(r.status===401){show('auth');throw Error('กรุณาเข้าสู่ระบบ')}const j=await r.json().catch(()=>({}));if(!r.ok)throw Error(j.error||'เกิดข้อผิดพลาด');return j}
+const $=id=>document.getElementById(id);
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const num=s=>Number(String(s).replace(/,/g,''));
+const fmt=n=>Number(n).toLocaleString('th-TH',{minimumFractionDigits:2,maximumFractionDigits:2});
+const fmt0=n=>Number(n).toLocaleString('th-TH',{maximumFractionDigits:0});
+const TL={INCOME:'รายรับ',EXPENSE:'รายจ่าย',TRANSFER:'โอน',REFUND:'รับคืน',ADJUST:'ปรับยอด'};
+const DEF_CATS=['อาหาร','เดินทาง','ค่าห้อง/น้ำไฟ','ค่าโทรศัพท์/เน็ต','ซื้อของ','ผ่อนหนี้','ความบันเทิง','สุขภาพ','การเรียน','เงินออม','เงินเดือน','อื่น ๆ'];
+const KINDS=['เงินเดือน','ใช้จ่าย','เงินออม','เงินสด','กระเป๋าเงิน'];
+const COL=['#1d6b4f','#4c9a7b','#8cbfa9','#c9a24b','#b5473a','#7c8c86'];
+const I={chev:'<svg class="chev" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg>',
+ ok:'<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5 9-10"/></svg>'};
+const ico=p=>`<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${p}</svg>`;
+const TABS=[['home','ภาพรวม',ico('<path d="M4 11l8-7 8 7v8a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1z"/>')],['txs','รายการ',ico('<path d="M8 6h12M8 12h12M8 18h12M4 6h.01M4 12h.01M4 18h.01"/>')],
+ ['list','เช็คลิสต์',ico('<rect x="4" y="4" width="16" height="16" rx="3"/><path d="M8 12l3 3 5-6"/>')],['rep','รายงาน',ico('<path d="M5 20V10M12 20V4M19 20v-7"/>')],['more','เพิ่มเติม',ico('<circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/>')]];
+const TITLE={home:'ภาพรวม',txs:'รายการ',list:'เช็คลิสต์รายเดือน',rep:'รายงาน',more:'เพิ่มเติม',accts:'บัญชีของฉัน',acct:'รายการเดินบัญชี',budget:'งบประมาณ',goals:'เป้าหมายออม',salary:'เงินเดือนและรอบเงินเดือน',bills:'บิลประจำ'};
+const S={stack:[{v:'home'}],accts:[],tot:{income:'0',expense:'0'},cats:[...DEF_CATS],tok:0,mode:'login',txf:{type:'EXPENSE',month:null,q:'',acc:''},ckm:null,tx:new Map(),me:null};
+const bkkNow=()=>new Date(Date.now()+7*36e5),thisMonth=()=>bkkNow().toISOString().slice(0,7);
+const monthShift=(k,d)=>{const[y,m]=k.split('-').map(Number),x=new Date(Date.UTC(y,m-1+d,1));return x.toISOString().slice(0,7)};
+const monthName=k=>{const[y,m]=k.split('-').map(Number);return new Date(Date.UTC(y,m-1,15)).toLocaleDateString('th-TH',{month:'long',year:'numeric',timeZone:'UTC'})};
+const monthRange=k=>{const[y,m]=k.split('-').map(Number);return[new Date(Date.UTC(y,m-1,1)-7*36e5).toISOString(),new Date(Date.UTC(y,m,1)-7*36e5-1).toISOString()]};
+const dShort=d=>new Date(d).toLocaleDateString('th-TH',{day:'numeric',month:'short'});
+const dLong=d=>new Date(d).toLocaleDateString('th-TH',{weekday:'short',day:'numeric',month:'short'});
+const dayKey=d=>new Date(d).toLocaleDateString('en-CA',{timeZone:'Asia/Bangkok'});
+function toast(m,ms=3200){const t=$('toast');t.textContent=m;t.classList.remove('hide');clearTimeout(toast.h);toast.h=setTimeout(()=>t.classList.add('hide'),ms)}
+function friendly(j){const d=j.details&&j.details[0];if(!d)return j.error||'เกิดข้อผิดพลาด';const k=d.path&&d.path[0];
+ return k==='password'?'รหัสผ่านต้องยาวอย่างน้อย 10 ตัวอักษร':k==='email'?'อีเมลไม่ถูกต้อง':/amount|target|opening/.test(k)?'จำนวนเงินไม่ถูกต้อง':(d.message||j.error)}
+async function api(p,m='GET',b){
+ if(!navigator.onLine)throw Error(m==='GET'?'ออฟไลน์ — ดูข้อมูลไม่ได้':'ออฟไลน์ — บันทึกไม่ได้ ข้อมูลที่กรอกยังอยู่ในหน้านี้');
+ let r;try{r=await fetch(p,{method:m,credentials:'same-origin',headers:b?{'Content-Type':'application/json'}:{},body:b?JSON.stringify(b):undefined})}
+ catch{throw Error('เชื่อมต่อเซิร์ฟเวอร์ไม่ได้ — ยังไม่ได้บันทึก ลองใหม่อีกครั้ง')}
+ const j=await r.json().catch(()=>({}));
+ if(r.status===401&&!p.startsWith('/api/auth/')){show('auth');throw Error('กรุณาเข้าสู่ระบบ')}
+ if(!r.ok)throw Error(friendly(j));return j}
 function show(w){$('auth').classList.toggle('hide',w!=='auth');$('app').classList.toggle('hide',w!=='app')}
-async function auth(path){try{await api(path,'POST',{email:$('em').value,password:$('pw').value});await boot()}catch(e){toast(e.message.includes('details')?'ข้อมูลไม่ถูกต้อง (รหัสผ่านอย่างน้อย 10 ตัว)':e.message)}}
-$('login').onclick=()=>auth('/api/auth/login');$('reg').onclick=()=>auth('/api/auth/register');
-async function load(){const a=await api('/api/accounts');accts=a.accounts;tot=a.totals}
-const an=id=>esc((accts.find(a=>a.id===id)||{}).name||'-');
-async function render(){document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('on',b.dataset.v===view));
- const v=$('v');$('ttl').textContent={dash:'ภาพรวม',txs:'สมุดบัญชี',ana:'วิเคราะห์การใช้จ่าย',accts:'บัญชีของฉัน',set:'ตั้งค่า'}[view];v.innerHTML='<p class="m">กำลังโหลด…</p>';
- try{await load();
- if(view==='dash'){const real=accts.reduce((s,a)=>s+Number(a.balance),0).toFixed(2),tx=(await api('/api/transactions')).slice(0,6);
-  v.innerHTML=`<div class="card"><div class="m">ยอดเงินจริงรวมทุกบัญชี (ตามที่บันทึกไว้)</div><div class="big">฿${fmt(real)}</div></div>
-  ${accts.length?'':'<div class="card"><b>เริ่มต้นใช้งาน</b><p class="m">1) แท็บ “บัญชี” → เพิ่มบัญชี 2) กดปุ่ม + เพื่อบันทึกรายรับ/รายจ่าย ใส่หมวดหมู่และโน้ต 3) ดูสรุปที่แท็บ “วิเคราะห์”</p></div>'}<div class="card"><div class="row"><span>รายรับจริง</span><b class="in">฿${fmt(tot.income)}</b></div><div class="row"><span>รายจ่ายจริง</span><b class="out">฿${fmt(tot.expense)}</b></div>
-  <div class="m">การโอนระหว่างบัญชีไม่นับเป็นรายรับ/รายจ่าย • งบประมาณยังไม่เปิดใช้ในเวอร์ชันนี้</div></div>
-  <div class="card"><b>รายการล่าสุด</b>${tx.length?tx.map(row).join(''):'<p class="m">ยังไม่มีรายการ กดปุ่ม + เพื่อเริ่มบันทึก</p>'}</div>`}
- else if(view==='txs'){v.innerHTML=`<input id="q" placeholder="ค้นหาชื่อรายการ"><select id="tf"><option value="">ทุกประเภท</option>${Object.entries(TL).map(([k,t])=>`<option value="${k}">${t}</option>`).join('')}</select><div class="card" id="list"></div>`;
-  const go=async()=>{const p=new URLSearchParams();if($('q').value)p.set('search',$('q').value);if($('tf').value)p.set('type',$('tf').value);
-   const tx=await api('/api/transactions?'+p);$('list').innerHTML=tx.length?tx.map(row).join(''):'<p class="m">ไม่พบรายการ</p>';
-   $('list').querySelectorAll('[data-id]').forEach(e=>e.onclick=()=>act(e.dataset.id,e.dataset.t,e.dataset.a,e.dataset.s))};
-  $('q').oninput=go;$('tf').onchange=go;go()}
- else if(view==='ana'){const P={t:'วันนี้',w:'7 วันล่าสุด',m:'เดือนนี้',y:'ปีนี้'};
-  v.innerHTML=`<select id="prd">${Object.entries(P).map(([k,t])=>`<option value="${k}"${k===per?' selected':''}>${t}</option>`).join('')}</select><div id="ab"><p class="m">กำลังโหลด…</p></div>`;
-  const go=async()=>{per=$('prd').value;const n=new Date(),s=new Date(n.getFullYear(),n.getMonth(),n.getDate());
-   if(per==='w')s.setDate(s.getDate()-6);if(per==='m')s.setDate(1);if(per==='y'){s.setMonth(0);s.setDate(1)}
-   const e=new Date(n.getFullYear(),n.getMonth(),n.getDate(),23,59,59),days=Math.max(1,Math.round((e-s)/864e5));
-   const d=await api('/api/summary?from='+encodeURIComponent(s.toISOString())+'&to='+encodeURIComponent(e.toISOString()));
-   const ex=Number(d.expense),mx=d.byCategory.length?Number(d.byCategory[0].amount):1,top=d.byCategory[0];
-   $('ab').innerHTML=`<div class="card"><div class="row"><span>รายรับ</span><b class="in">฿${fmt(d.income)}</b></div><div class="row"><span>รายจ่าย</span><b class="out">฿${fmt(d.expense)}</b></div><div class="row"><span>สุทธิ (รับ − จ่าย)</span><b>฿${fmt(d.net)}</b></div><div class="m">${d.count} รายการ • ไม่นับการโอนระหว่างบัญชี</div></div>
-   <div class="card"><b>ข้อสังเกต</b><p class="m">${ex?`ใช้จ่ายเฉลี่ยวันละ ฿${fmt(ex/days)}${top?` • หมวดที่ใช้มากสุดคือ “${esc(top.name)}” (${Math.round(Number(top.amount)/ex*100)}% ของรายจ่าย)`:''}`:'ยังไม่มีรายจ่ายในช่วงนี้'}${Number(d.net)<0?' • ช่วงนี้จ่ายมากกว่ารับ':''}</p></div>
-   <div class="card"><b>รายจ่ายตามหมวดหมู่</b>${d.byCategory.length?d.byCategory.map(c=>`<div style="margin:10px 0"><div class="row" style="border:0;padding:0"><span>${esc(c.name)}</span><span>฿${fmt(c.amount)} (${Math.round(Number(c.amount)/ex*100)}%)</span></div><div style="background:var(--g2);border-radius:6px;height:10px"><div style="background:var(--g);height:10px;border-radius:6px;width:${Math.max(2,Number(c.amount)/mx*100)}%"></div></div></div>`).join(''):'<p class="m">ไม่มีข้อมูล</p>'}</div>
-   <div class="card"><b>5 รายการจ่ายสูงสุด</b>${d.top.length?d.top.map(t=>`<div class="row"><span>${esc(t.title)}<br><span class="m">${esc(t.date)}${t.category?' • '+esc(t.category):''}${t.note?' • 📝 '+esc(t.note):''}</span></span><b class="out">฿${fmt(t.amount)}</b></div>`).join(''):'<p class="m">ไม่มีข้อมูล</p>'}</div>
-   <div class="card"><b>รายวัน</b>${d.byDay.length?d.byDay.slice().reverse().map(x=>`<div class="row"><span>${esc(x.date)}</span><span><span class="in">+${fmt(x.income)}</span> <span class="out">−${fmt(x.expense)}</span></span></div>`).join(''):'<p class="m">ไม่มีข้อมูล</p>'}</div>`};
-  $('prd').onchange=()=>go().catch(er=>toast(er.message));go()}
- else if(view==='accts'){v.innerHTML=`<div class="card">${accts.length?accts.map(a=>`<div class="row"><span>${esc(a.name)}<br><span class="m">${esc(a.kind)}</span></span><b>฿${fmt(a.balance)}</b></div>`).join(''):'<p class="m">ยังไม่มีบัญชี เพิ่มบัญชีแรกด้านล่าง</p>'}</div>
-  <div class="card"><b>เพิ่มบัญชี</b><input id="an" placeholder="ชื่อบัญชี เช่น บัญชีเงินเดือน"><select id="ak"><option>เงินเดือน</option><option>ใช้จ่าย</option><option>เงินออม</option><option>เงินสด</option><option>กระเป๋าเงิน</option></select><input id="ao" inputmode="decimal" placeholder="ยอดตั้งต้น (บาท)" value="0"><button class="b" id="aa">เพิ่มบัญชี</button></div>`;
-  $('aa').onclick=async()=>{try{await api('/api/accounts','POST',{name:$('an').value,kind:$('ak').value,opening:$('ao').value});toast('เพิ่มบัญชีแล้ว — กดปุ่ม + เพื่อบันทึกรายการ');render()}catch(e){toast(e.message)}}}
- else v.innerHTML=`<div class="card"><b>ติดตั้งบน iPhone</b><p class="m">เปิดด้วย Safari → ปุ่มแชร์ → “เพิ่มลงในหน้าจอโฮม”</p></div>
-  <div class="card"><a href="/api/export/transactions.csv" download><button class="b s" type="button">ส่งออกธุรกรรม CSV</button></a><button class="b s" id="lo">ออกจากระบบ</button></div>`;
-  if(view==='set')$('lo').onclick=async()=>{await api('/api/auth/logout','POST',{});show('auth')}
- }catch(e){v.innerHTML=`<div class="card out">${esc(e.message)}</div>`}}
-function row(t){const s=t.status==='VOID',c=t.type==='EXPENSE'?'out':t.type==='TRANSFER'?'':'in',sg=t.type==='EXPENSE'?'-':t.type==='TRANSFER'?'':'+';
- return `<div class="row" data-id="${t.id}" data-t="${esc(t.title)}" data-a="${t.amount}" data-s="${t.status}" style="${s?'opacity:.45;text-decoration:line-through':''}"><span>${esc(t.title)}<br><span class="m">${TL[t.type]} • ${new Date(t.occurredAt).toLocaleDateString('th-TH')} • ${t.type==='TRANSFER'?an(t.fromAccountId)+'→'+an(t.toAccountId):an(t.fromAccountId||t.toAccountId)}${t.category?' • '+esc(t.category):''}${s?' • ยกเลิกแล้ว':''}</span>${t.note?'<br><span class="m">📝 '+esc(t.note)+'</span>':''}</span><b class="${c}">${sg}${fmt(t.amount)}</b></div>`}
-async function act(id,title,amt,st){if(st==='VOID')return;const ch=prompt('แก้ไขจำนวนเงิน (เว้นว่าง = ไม่แก้)\nพิมพ์ DELETE เพื่อยกเลิกรายการนี้',amt);if(ch===null||ch===''||ch===amt)return;
- try{if(ch==='DELETE'){if(!confirm('ยืนยันยกเลิกรายการ “'+title+'” ? ยอดบัญชีจะถูกคำนวณใหม่'))return;await api('/api/transactions/'+id,'DELETE');}else await api('/api/transactions/'+id,'PUT',{amount:ch,title});toast('สำเร็จ');render()}catch(e){toast(e.message)}}
-const loc=()=>{const d=new Date();d.setMinutes(d.getMinutes()-d.getTimezoneOffset());return d.toISOString().slice(0,16)};
-function sync(){const t=$('ty').value;const o=accts.map(a=>`<option value="${a.id}">${esc(a.name)}</option>`).join('');
- $('fa').innerHTML=o;$('ta').innerHTML=o;$('fa').style.display=t==='INCOME'?'none':'';$('ta').style.display=t==='EXPENSE'?'none':''}
-$('ty').onchange=sync;$('cx').onclick=()=>$('dlg').close();
-$('add').onclick=()=>{if(!accts.length){toast('กรุณาเพิ่มบัญชีก่อน');view='accts';render();return}sync();$('dt').value=loc();$('f').dataset.key=crypto.randomUUID();$('dlg').showModal()};
-$('f').onsubmit=async e=>{e.preventDefault();if(busy)return;busy=true;$('sv').disabled=true;const t=$('ty').value;
- const b={type:t,title:$('ti').value,amount:$('am').value.replace(/,/g,''),occurredAt:new Date($('dt').value).toISOString(),idempotencyKey:$('f').dataset.key};
- if($('ct').value)b.category=$('ct').value;if($('nt').value)b.note=$('nt').value;if(t!=='INCOME')b.fromAccountId=$('fa').value;if(t!=='EXPENSE')b.toAccountId=$('ta').value;
- try{await api('/api/transactions','POST',b);$('dlg').close();$('f').reset();toast('บันทึกลงฐานข้อมูลแล้ว');render()}catch(er){toast(er.message)}finally{busy=false;$('sv').disabled=false}};
-document.querySelectorAll('nav button').forEach(b=>b.onclick=()=>{view=b.dataset.v;render()});
-addEventListener('online',()=>$('off').style.display='none');addEventListener('offline',()=>$('off').style.display='block');
-async function boot(){try{await api('/api/me');show('app');render()}catch{show('auth')}}
+const saveBtn=(label,act,data='')=>`<button class="btn save" data-a="${act}" ${data}><span class="onl">${label}</span><span class="offl">ออฟไลน์ — บันทึกไม่ได้</span></button><div class="offnote">ข้อมูลที่กรอกยังอยู่ กลับมาออนไลน์แล้วกดบันทึกได้เลย</div>`;
+function sheet(html){const d=$('sheet');d.innerHTML='<div class="grab"></div>'+html;if(!d.open)d.showModal()}
+const closeSheet=()=>{const d=$('sheet');if(d.open)d.close()};
+$('sheet').addEventListener('click',e=>{if(e.target===$('sheet'))closeSheet()});
+const opts=(arr,sel)=>arr.map(a=>`<option value="${esc(a.id)}"${a.id===sel?' selected':''}>${esc(a.name)}</option>`).join('');
+const catList=()=>`<datalist id="cl">${S.cats.map(c=>`<option value="${esc(c)}">`).join('')}</datalist>`;
+const an=id=>esc((S.accts.find(a=>a.id===id)||{}).name||'-');
+
+/* ---------- เส้นทางหน้า ---------- */
+const cur=()=>S.stack[S.stack.length-1];
+const tab=v=>{S.stack=[{v}];render()};
+const push=(v,arg)=>{S.stack.push({v,arg});render()};
+async function loadAccts(){const a=await api('/api/accounts');S.accts=a.accounts;S.tot=a.totals}
+async function render(){
+ const{v,arg}=cur(),tok=++S.tok,root=S.stack.length===1;
+ $('tabs').innerHTML=TABS.map(([k,l,i])=>`<button data-a="tab" data-v="${k}" class="${(S.stack[0].v===k)?'on':''}" aria-label="${l}">${i}<span>${l}</span></button>`).join('');
+ $('back').classList.toggle('hide',root);$('ttl').textContent=TITLE[v]||'';$('act').innerHTML='';$('fab').classList.toggle('hide',!['home','txs','acct'].includes(v));
+ $('v').innerHTML='<p class="m" style="margin-top:24px">กำลังโหลด…</p>';
+ try{await loadAccts();const[html,mount]=await P[v](arg,tok);if(tok!==S.tok)return;$('v').innerHTML=html;mount&&mount();scrollTo(0,0)}
+ catch(e){if(tok===S.tok)$('v').innerHTML=`<div class="err">${esc(e.message)}</div>`}}
+const reload=()=>{const t=scrollY;return render().then(()=>scrollTo(0,t))};
+
+/* ---------- ส่วนประกอบ ---------- */
+function txRow(t,o={}){S.tx.set(t.id,t);const v=t.status==='VOID',ex=t.type==='EXPENSE',tr=t.type==='TRANSFER';
+ const amt=o.amt??((ex?'−':tr?'':'+')+fmt(t.amount)),cls=o.cls??(ex?'out':tr?'':'in');
+ const acc=tr?an(t.fromAccountId)+' → '+an(t.toAccountId):an(t.fromAccountId||t.toAccountId);
+ const meta=[t.category||TL[t.type],o.noAcc?'':acc,v?'ยกเลิกแล้ว':''].filter(Boolean).join(' · ');
+ return `<button class="row ${v?'void':''}" data-a="tx" data-id="${esc(t.id)}"><span class="t"><b>${esc(t.title)}</b><span class="m">${esc(meta)}${t.note?' · '+esc(t.note):''}</span></span><span class="a ${cls}">${amt}${o.sub?`<small>${o.sub}</small>`:''}</span></button>`}
+function byDay(items,fn){let last='',h='';for(const t of items){const k=dayKey(t.occurredAt);if(k!==last){if(last)h+='</div>';h+=`<div class="day">${dLong(t.occurredAt)}</div><div class="list">`;last=k}h+=fn(t)}return h+(last?'</div>':'')}
+const empty=(t,s,btn)=>`<div class="empty"><b>${t}</b>${s||''}${btn||''}</div>`;
+const prog=(pct,cls='')=>`<div class="meter ${cls}" role="progressbar" aria-valuenow="${pct}" aria-valuemin="0" aria-valuemax="100"><i style="width:${Math.min(100,Math.max(pct?2:0,pct))}%"></i></div>`;
+const link=(t,s,act,data='')=>`<button class="row" data-a="${act}" ${data}><span class="t"><b>${t}</b>${s?`<span class="m">${s}</span>`:''}</span>${I.chev}</button>`;
+
+const P={};
+/* ภาพรวม */
+P.home=async()=>{
+ const[tx,cy,ck,bg]=await Promise.all([api('/api/transactions'),api('/api/cycle'),api('/api/checklist?month='+thisMonth()),api('/api/budgets')]);
+ const total=S.accts.reduce((s,a)=>s+num(a.balance),0),[i,d]=fmt(total).split('.');
+ const el=Math.round((Date.now()-new Date(cy.start))/(new Date(cy.end)-new Date(cy.start))*100);
+ const risky=bg.budgets.filter(b=>b.state!=='ok').slice(0,2);
+ let h=`<div class="hero"><div class="l">ยอดเงินรวมทุกบัญชี</div><div class="n">฿${i}<small>.${d}</small></div>
+  <div class="m" style="margin-top:8px">${cy.hasSalary?`อีก ${cy.daysLeft} วันถึงเงินเดือนรอบถัดไป`:`อีก ${cy.daysLeft} วันสิ้นเดือน`}</div>${prog(el)}
+  <div class="m">${cy.hasSalary?'รอบนี้':'เดือนนี้'}ใช้ไป <b class="out">฿${fmt(cy.expense)}</b> · รับ <b class="in">฿${fmt(cy.income)}</b></div></div>`;
+ if(!S.accts.length)return[h+empty('เริ่มจากเพิ่มบัญชีแรก','เช่น บัญชีเงินเดือน หรือเงินสดในกระเป๋า',`<button class="btn" data-a="newAcct">เพิ่มบัญชี</button>`)];
+ h+=`<h2>บัญชี</h2><div class="list">${S.accts.map(a=>link(esc(a.name),esc(a.kind),'acct',`data-id="${esc(a.id)}"`).replace('</span>'+I.chev,`</span><span class="a">฿${fmt(a.balance)}</span>`+I.chev)).join('')}</div>`;
+ if(risky.length)h+=`<h2>งบที่ต้องระวัง</h2><div class="list">${risky.map(b=>`<button class="row" data-a="go" data-v="budget"><span class="t"><b>${esc(b.category)}</b>${prog(b.pct,b.state)}<span class="m ${b.state==='over'?'out':'warn'}">${b.state==='over'?'เกินงบ ฿'+fmt(-b.remaining):'เหลือ ฿'+fmt(b.remaining)}</span></span></button>`).join('')}</div>`;
+ h+=`<h2>เช็คลิสต์เดือนนี้</h2>`+(ck.items.length?`<div class="list"><button class="row" data-a="tab" data-v="list"><span class="t"><b>จ่ายแล้ว ${ck.doneCount} จาก ${ck.items.length} รายการ</b>${prog(num(ck.total)?Math.round(num(ck.paid)/num(ck.total)*100):0)}<span class="m">เหลือ ฿${fmt(ck.left)}</span></span>${I.chev}</button></div>`
+  :`<div class="list">${link('ยังไม่มีบิลประจำ','เพิ่มค่าห้อง ค่าเน็ต ฯลฯ แล้วระบบจะขึ้นเช็คลิสต์ให้ทุกเดือน','go','data-v="bills"')}</div>`);
+ h+=`<h2>ล่าสุด</h2>`+(tx.length?`<div class="list">${tx.slice(0,6).map(t=>txRow(t)).join('')}</div>`:empty('ยังไม่มีรายการ','กดปุ่ม + เพื่อบันทึกรายการแรก'));
+ return[h]};
+
+/* รายการทั้งหมด: ลิสต์ว่าจ่ายอะไรบ้าง */
+P.txs=async()=>{
+ const f=S.txf;f.month=f.month||thisMonth();const[from,to]=monthRange(f.month);
+ const p=new URLSearchParams({from,to});if(f.type)p.set('type',f.type);if(f.q)p.set('search',f.q);if(f.acc)p.set('accountId',f.acc);
+ const all=await api('/api/transactions?'+p),tx=all.filter(t=>t.status==='POSTED');
+ const sum=ty=>tx.filter(t=>t.type===ty).reduce((s,t)=>s+num(t.amount),0);
+ const head=f.type==='EXPENSE'?`จ่ายไป <b class="out">฿${fmt(sum('EXPENSE'))}</b> · ${tx.length} รายการ`:f.type==='INCOME'?`รับเข้า <b class="in">฿${fmt(sum('INCOME'))}</b> · ${tx.length} รายการ`:
+  `รับ <b class="in">฿${fmt(sum('INCOME')+sum('REFUND'))}</b> · จ่าย <b class="out">฿${fmt(sum('EXPENSE'))}</b>`;
+ const h=`<div class="seg">${[['EXPENSE','รายจ่าย'],['INCOME','รายรับ'],['TRANSFER','โอน'],['','ทั้งหมด']].map(([k,l])=>`<button data-a="txType" data-k="${k}" class="${f.type===k?'on':''}">${l}</button>`).join('')}</div>
+ <div class="step"><button class="ib" data-a="txMonth" data-d="-1" aria-label="เดือนก่อน">${I.chev.replace('class="chev"','style="transform:scaleX(-1)"')}</button><b>${monthName(f.month)}</b><button class="ib" data-a="txMonth" data-d="1" aria-label="เดือนถัดไป" ${f.month>=thisMonth()?'disabled style="opacity:.3"':''}>${I.chev}</button></div>
+ <div class="m" style="margin:0 2px 8px">${head}</div>
+ <input id="q" type="search" placeholder="ค้นหาชื่อรายการ" value="${esc(f.q)}"><select id="fa2"><option value="">ทุกบัญชี</option>${opts(S.accts,f.acc)}</select>
+ ${all.length?byDay(all,t=>txRow(t)):empty('ไม่พบรายการ','ลองเปลี่ยนเดือนหรือตัวกรอง')}`;
+ return[h,()=>{let tm;$('q').oninput=e=>{clearTimeout(tm);tm=setTimeout(()=>{f.q=e.target.value;reload()},350)};$('fa2').onchange=e=>{f.acc=e.target.value;reload()}}]};
+
+/* บัญชี + รายการเดินบัญชี */
+P.accts=async()=>[`<div class="list">${S.accts.map(a=>link(esc(a.name),esc(a.kind),'acct',`data-id="${esc(a.id)}"`).replace('</span>'+I.chev,`</span><span class="a">฿${fmt(a.balance)}</span>`+I.chev)).join('')||empty('ยังไม่มีบัญชี')}</div><button class="btn" data-a="newAcct">เพิ่มบัญชี</button>`];
+P.acct=async id=>{const s=await api(`/api/accounts/${id}/statement`);
+ const h=`<div class="hero"><div class="l">${esc(s.account.name)} · ${esc(s.account.kind)}</div><div class="n">฿${fmt(s.balance).split('.')[0]}<small>.${fmt(s.balance).split('.')[1]}</small></div>
+ <div class="m">ยอดตั้งต้น ฿${fmt(s.account.opening)} · <button class="btn sm ghost" data-a="editAcct" data-id="${esc(id)}" data-n="${esc(s.account.name)}" data-k="${esc(s.account.kind)}">แก้ไขบัญชี</button></div></div>
+ <h2>รายการเดินบัญชี</h2>${s.items.length?byDay(s.items,t=>{const d=num(t.delta);return txRow(t,{noAcc:true,amt:t.status==='VOID'?fmt(t.amount):(d>=0?'+':'−')+fmt(Math.abs(d)),cls:d>=0?'in':'out',sub:t.status==='VOID'?'':'คงเหลือ '+fmt(t.balanceAfter)})}):empty('ยังไม่มีรายการในบัญชีนี้')}`;
+ S.curAcct=id;return[h]};
+
+/* เช็คลิสต์ประจำเดือน */
+P.list=async()=>{const k=S.ckm||(S.ckm=thisMonth()),c=await api('/api/checklist?month='+k),today=Date.now(),pct=num(c.total)?Math.round(num(c.paid)/num(c.total)*100):0;
+ const h=`<div class="step"><button class="ib" data-a="ckMonth" data-d="-1" aria-label="เดือนก่อน">${I.chev.replace('class="chev"','style="transform:scaleX(-1)"')}</button><b>${monthName(k)}</b><button class="ib" data-a="ckMonth" data-d="1" aria-label="เดือนถัดไป" ${k>monthShift(thisMonth(),1)?'disabled style="opacity:.3"':''}>${I.chev}</button></div>
+ ${c.items.length?`<div class="card"><b>จ่ายแล้ว ${c.doneCount} จาก ${c.items.length} รายการ</b>${prog(pct)}<span class="m">จ่ายแล้ว ฿${fmt(c.paid)} จาก ฿${fmt(c.total)} · เหลือ ฿${fmt(c.left)}</span></div>
+ <h2>รายการ</h2><div class="list">${c.items.map(i=>{const late=i.status!=='paid'&&new Date(i.dueDate)<today;
+  return `<div class="row"><button class="chk ${i.status}" data-a="ckTap" data-id="${esc(i.id)}" data-s="${i.status}" data-n="${esc(i.name)}" data-am="${i.amount}" data-pd="${i.paid}" aria-label="${i.status==='paid'?'จ่ายแล้ว':'ทำเครื่องหมายว่าจ่าย'} ${esc(i.name)}">${I.ok}</button>
+  <button class="t" style="background:none;border:0;text-align:left;padding:0" data-a="ckEdit" data-id="${esc(i.id)}" data-n="${esc(i.name)}" data-am="${i.amount}"><b class="${i.status==='paid'?'m':''}" style="${i.status==='paid'?'text-decoration:line-through':''}">${esc(i.name)}</b><span class="m ${late?'warn':''}">${late?'เลยกำหนด ':'ครบกำหนด '}${dShort(i.dueDate)}${i.status==='partial'?' · จ่ายแล้ว ฿'+fmt(i.paid):''}</span></button><span class="a">฿${fmt(i.amount)}</span></div>`}).join('')}</div>`
+ :empty('เดือนนี้ยังไม่มีรายการ','เพิ่มบิลประจำเพื่อให้ขึ้นเองทุกเดือน หรือเพิ่มรายการครั้งเดียว')}
+ <button class="btn ghost" data-a="ckAdd">เพิ่มรายการเดือนนี้</button><div class="list" style="margin-top:14px">${link('จัดการบิลประจำ','รายการที่ขึ้นเช็คลิสต์ให้ทุกเดือน','go','data-v="bills"')}</div>`;
+ return[h]};
+
+/* รายงาน (กราฟ SVG) */
+function donut(rows,total){const R=46,C=2*Math.PI*R;let off=0;const top=rows.slice(0,5),rest=rows.slice(5).reduce((s,r)=>s+num(r.amount),0),segs=[...top.map(r=>({n:r.name,v:num(r.amount)})),...(rest>0?[{n:'อื่น ๆ',v:rest}]:[])];
+ const arcs=segs.map((s,i)=>{const len=s.v/total*C,x=`<circle cx="60" cy="60" r="${R}" fill="none" stroke="${COL[i]}" stroke-width="16" stroke-dasharray="${len} ${C-len}" stroke-dashoffset="${-off}" transform="rotate(-90 60 60)"/>`;off+=len;return x}).join('');
+ return `<div style="display:flex;gap:16px;align-items:center"><svg width="120" height="120" viewBox="0 0 120 120" role="img" aria-label="สัดส่วนรายจ่ายตามหมวด">${arcs}</svg><div style="flex:1;min-width:0">${segs.map((s,i)=>`<div class="legend"><i style="background:${COL[i]}"></i><span>${esc(s.n)}</span><b style="font-weight:500">${Math.round(s.v/total*100)}%</b></div>`).join('')}</div></div>`}
+function bars(items,twin){const W=320,H=120,max=Math.max(1,...items.map(i=>Math.max(i.a,i.b||0))),n=items.length,g=W/n,bw=Math.min(twin?10:18,g*(twin?.36:.62)),every=Math.ceil(n/7);
+ return `<svg viewBox="0 0 ${W} ${H+18}" width="100%" role="img" aria-label="กราฟแท่ง" style="display:block"><line x1="0" x2="${W}" y1="${H}" y2="${H}" stroke="var(--line)"/>${items.map((it,i)=>{const cx=g*i+g/2,h1=it.a/max*(H-6),h2=(it.b||0)/max*(H-6);
+  return (twin?`<rect x="${cx-bw-1}" y="${H-h2}" width="${bw}" height="${h2}" rx="2" fill="var(--ac)"/><rect x="${cx+1}" y="${H-h1}" width="${bw}" height="${h1}" rx="2" fill="var(--out)"/>`:`<rect x="${cx-bw/2}" y="${H-h1}" width="${bw}" height="${Math.max(h1,it.a>0?2:0)}" rx="2" fill="var(--out)"/>`)+(i%every===0?`<text x="${cx}" y="${H+14}" font-size="10" text-anchor="middle" fill="var(--mute)">${esc(it.l)}</text>`:'')}).join('')}</svg>`}
+P.rep=async()=>{const per=S.per||'m',n=bkkNow(),y=n.getUTCFullYear(),m=n.getUTCMonth(),d=n.getUTCDate();
+ let from=new Date(Date.UTC(y,m,d)-7*36e5);if(per==='w')from=new Date(from.getTime()-6*864e5);if(per==='m')from=new Date(Date.UTC(y,m,1)-7*36e5);if(per==='y')from=new Date(Date.UTC(y,0,1)-7*36e5);
+ const to=new Date(Date.UTC(y,m,d+1)-7*36e5-1),days=Math.max(1,Math.round((to-from)/864e5));
+ const[s,mo]=await Promise.all([api('/api/summary?from='+encodeURIComponent(from.toISOString())+'&to='+encodeURIComponent(to.toISOString())),api('/api/reports/monthly?months='+(per==='y'?12:6))]);
+ const ex=num(s.expense),top=s.byCategory[0],MN=k=>new Date(Date.UTC(+k.slice(0,4),+k.slice(5)-1,15)).toLocaleDateString('th-TH',{month:'short',timeZone:'UTC'});
+ const dm=new Map(s.byDay.map(x=>[x.date,num(x.expense)])),dayBars=[];for(let i=0;i<days&&i<31;i++){const t=new Date(to.getTime()-(Math.min(days,31)-1-i)*864e5),k=dayKey(t);dayBars.push({l:+k.slice(8),a:dm.get(k)||0})}
+ const h=`<div class="seg">${[['w','7 วัน'],['m','เดือนนี้'],['y','ปีนี้']].map(([k,l])=>`<button data-a="per" data-k="${k}" class="${per===k?'on':''}">${l}</button>`).join('')}</div>
+ <div class="card"><div style="display:flex;justify-content:space-between"><span class="m">รายรับ</span><b class="in">฿${fmt(s.income)}</b></div><div style="display:flex;justify-content:space-between"><span class="m">รายจ่าย</span><b class="out">฿${fmt(s.expense)}</b></div><div style="display:flex;justify-content:space-between"><span class="m">คงเหลือสุทธิ</span><b>฿${fmt(s.net)}</b></div>
+ <p class="m" style="margin:10px 0 0">${ex?`ใช้เฉลี่ยวันละ ฿${fmt(ex/days)}${top?` · มากสุดคือ “${esc(top.name)}” (${Math.round(num(top.amount)/ex*100)}%)`:''}`:'ยังไม่มีรายจ่ายในช่วงนี้'}${num(s.net)<0?' · ช่วงนี้จ่ายมากกว่ารับ':''}</p></div>
+ ${ex?`<h2>รายจ่ายตามหมวด</h2><div class="card">${donut(s.byCategory,ex)}</div>`:''}
+ ${per==='y'?`<h2>รายเดือน (เขียว = รับ, แดง = จ่าย)</h2><div class="card">${bars(mo.map(x=>({l:MN(x.month),a:num(x.expense),b:num(x.income)})),true)}</div>`
+  :`<h2>รายจ่ายรายวัน</h2><div class="card">${bars(dayBars)}</div><h2>6 เดือนล่าสุด (เขียว = รับ, แดง = จ่าย)</h2><div class="card">${bars(mo.map(x=>({l:MN(x.month),a:num(x.expense),b:num(x.income)})),true)}</div>`}
+ ${s.top.length?`<h2>จ่ายสูงสุด 5 อันดับ</h2><div class="list">${s.top.map(t=>`<div class="row"><span class="t"><b>${esc(t.title)}</b><span class="m">${esc(t.date)}${t.category?' · '+esc(t.category):''}</span></span><span class="a out">฿${fmt(t.amount)}</span></div>`).join('')}</div>`:''}`;
+ return[h]};
+
+/* เพิ่มเติม */
+P.more=async()=>[`<div class="list">${link('บัญชีของฉัน',S.accts.length+' บัญชี','go','data-v="accts"')}${link('งบประมาณ','ตั้งงบรายหมวด ดูว่าใช้ไปเท่าไร','go','data-v="budget"')}${link('เป้าหมายออม','เก็บเงินเพื่อสิ่งที่อยากได้','go','data-v="goals"')}${link('เงินเดือนและรอบเงินเดือน','ลงเงินเดือนให้อัตโนมัติ','go','data-v="salary"')}${link('บิลประจำ','ค่าห้อง ค่าเน็ต ฯลฯ ที่ต้องจ่ายทุกเดือน','go','data-v="bills"')}</div>
+ <h2>ข้อมูลของคุณ</h2><div class="list"><a class="row" style="text-decoration:none;color:inherit" href="/api/export/transactions.csv" download><span class="t"><b>ส่งออกรายการเป็น CSV</b><span class="m">เปิดต่อใน Excel หรือ Google Sheets</span></span>${I.chev}</a></div>
+ <h2>บัญชีผู้ใช้</h2><div class="list"><div class="row"><span class="t"><b>${esc(S.me?.email||'')}</b><span class="m">ข้อมูลทั้งหมดเป็นของบัญชีนี้เท่านั้น</span></span></div><button class="row" data-a="logout"><span class="t"><b>ออกจากระบบ</b></span></button></div>
+ <p class="m" style="margin-top:18px">ติดตั้งบน iPhone: เปิดด้วย Safari แล้วกดปุ่มแชร์ → “เพิ่มลงในหน้าจอโฮม”</p>`];
+
+/* งบประมาณ */
+P.budget=async()=>{const k=thisMonth(),b=(await api('/api/budgets?month='+k)).budgets;
+ return[`<div class="m" style="margin:2px 2px 10px">${monthName(k)} · งบที่ตั้งไว้จะใช้ต่อเนื่องทุกเดือนจนกว่าจะเปลี่ยน</div>${b.length?`<div class="list">${b.map(x=>`<button class="row" data-a="editBudget" data-c="${esc(x.category)}" data-am="${x.amount}"><span class="t"><b>${esc(x.category)}</b>${prog(x.pct,x.state)}<span class="m ${x.state==='over'?'out':x.state==='near'?'warn':''}">ใช้ไป ฿${fmt(x.spent)} จาก ฿${fmt(x.amount)} · ${x.state==='over'?'เกินงบ ฿'+fmt(-x.remaining):'เหลือ ฿'+fmt(x.remaining)}</span></span></button>`).join('')}</div>`:empty('ยังไม่ได้ตั้งงบ','ตั้งงบให้หมวดที่อยากคุม เช่น อาหาร เดินทาง')}<button class="btn" data-a="editBudget" data-c="" data-am="">ตั้งงบหมวดใหม่</button>`]};
+
+/* เป้าหมายออม */
+P.goals=async()=>{const g=await api('/api/goals');
+ return[`${g.length?g.map(x=>`<div class="card"><div style="display:flex;justify-content:space-between;gap:8px"><b>${esc(x.name)}</b><span class="m">${x.pct}%</span></div>${prog(x.pct)}<div class="m">฿${fmt(x.saved)} จาก ฿${fmt(x.target)}${num(x.left)>0?' · อีก ฿'+fmt(x.left):' · ถึงเป้าแล้ว'}</div><div class="m">เก็บในบัญชี ${esc(x.accountName||'—')}</div>
+ <div style="display:flex;gap:8px;margin-top:10px"><button class="btn sm" data-a="goalDeposit" data-id="${esc(x.id)}" data-n="${esc(x.name)}" data-ac="${esc(x.accountId)}">ฝากเงินเข้าเป้า</button><button class="btn sm ghost" data-a="goalEdit" data-id="${esc(x.id)}" data-n="${esc(x.name)}" data-t="${x.target}" data-ac="${esc(x.accountId)}">แก้ไข</button></div></div>`).join(''):empty('ยังไม่มีเป้าหมาย','เช่น เที่ยวญี่ปุ่น หรือเงินสำรองฉุกเฉิน')}<button class="btn" data-a="goalEdit" data-id="">เพิ่มเป้าหมาย</button>
+ <p class="m" style="margin-top:14px">ความคืบหน้านับจากยอดคงเหลือของบัญชีที่ผูกไว้ แนะนำให้ใช้บัญชีออมแยกต่อเป้าหมาย</p>`]};
+
+/* เงินเดือน / รอบเงินเดือน */
+P.salary=async()=>{const[r,cy]=await Promise.all([api('/api/salary'),api('/api/cycle')]),s=r.setting;
+ return[`<div class="card"><div class="m">รอบปัจจุบัน ${dShort(cy.start)} – ${dShort(new Date(new Date(cy.end)-864e5))}</div><b>อีก ${cy.daysLeft} วันถึงรอบถัดไป</b>${prog(Math.round((Date.now()-new Date(cy.start))/(new Date(cy.end)-new Date(cy.start))*100))}<div class="m">รอบนี้ใช้ไป ฿${fmt(cy.expense)} · รับ ฿${fmt(cy.income)}</div></div>
+ <h2>ตั้งเงินเดือนอัตโนมัติ</h2><div class="card"><div class="tog"><span>เปิดใช้งาน</span><input type="checkbox" id="sa" ${!s||s.active?'checked':''} style="width:auto;margin:0;transform:scale(1.3)"></div>
+ <label class="f"><span>ชื่อรายการ</span><input id="st" value="${esc(s?.title||'เงินเดือน')}" maxlength="60"></label>
+ <label class="f"><span>จำนวนเงินต่อเดือน (บาท)</span><input id="sm" inputmode="decimal" value="${s?s.amount:''}" placeholder="เช่น 30000"></label>
+ <label class="f"><span>เงินเดือนเข้าวันที่</span><select id="sd">${Array.from({length:31},(_,i)=>`<option value="${i+1}"${(s?.payDay||25)===i+1?' selected':''}>${i+1}</option>`).join('')}</select></label>
+ <label class="f"><span>เข้าบัญชี</span><select id="sc">${opts(S.accts,s?.accountId)}</select></label>
+ ${saveBtn('บันทึกการตั้งค่า','saveSalary')}${s?'<button class="btn ghost danger" data-a="arm" data-then="delSalary">ลบการตั้งค่า</button>':''}
+ <p class="m" style="margin-top:10px">ระบบลงรายรับให้เองเมื่อถึงวัน (ตั้งแต่รอบถัดไป ไม่ย้อนหลัง) ถ้าวันที่เกินสิ้นเดือนจะใช้วันสุดท้ายของเดือน หากเดือนไหนเงินเดือนไม่เท่าเดิม แก้ยอดที่หน้า “รายการ” ได้</p></div>
+ ${r.payments.length?`<h2>ที่ลงให้แล้ว</h2><div class="list">${r.payments.map(p=>`<div class="row"><span class="t"><b>${dShort(p.periodStart)}</b></span><span class="a in">+${fmt(p.received??p.expected)}</span></div>`).join('')}</div>`:''}`]};
+
+/* บิลประจำ */
+P.bills=async()=>{const t=await api('/api/bill-templates');
+ return[`${t.length?`<div class="list">${t.map(x=>`<button class="row" data-a="billEdit" data-id="${esc(x.id)}" data-n="${esc(x.name)}" data-am="${x.amount}" data-d="${x.dayOfMonth}" data-c="${esc(x.category||'')}" data-ac="${esc(x.accountId||'')}"><span class="t"><b>${esc(x.name)}</b><span class="m">ทุกวันที่ ${x.dayOfMonth}${x.category?' · '+esc(x.category):''}</span></span><span class="a">฿${fmt(x.amount)}</span></button>`).join('')}</div>`:empty('ยังไม่มีบิลประจำ','เพิ่มสิ่งที่ต้องจ่ายทุกเดือน แล้วระบบจะสร้างเช็คลิสต์ให้เอง')}<button class="btn" data-a="billEdit" data-id="">เพิ่มบิลประจำ</button>`]};
+
+/* ---------- แผ่นกรอกข้อมูล ---------- */
+function openAdd(pre={}){
+ if(!S.accts.length){toast('เพิ่มบัญชีก่อนบันทึกรายการ');push('accts');return}
+ S.addType=pre.type||'EXPENSE';S.key=crypto.randomUUID();const loc=new Date(Date.now()-new Date().getTimezoneOffset()*6e4).toISOString().slice(0,16);
+ sheet(`<h3>เพิ่มรายการ</h3><div class="seg">${[['EXPENSE','รายจ่าย'],['INCOME','รายรับ'],['TRANSFER','โอนเงิน']].map(([k,l])=>`<button type="button" data-a="addType" data-k="${k}" class="${k===S.addType?'on':''}">${l}</button>`).join('')}</div>
+ <input id="am" class="amt" inputmode="decimal" placeholder="0.00" autocomplete="off" aria-label="จำนวนเงิน"><input id="ti" placeholder="จ่ายอะไร เช่น ข้าวกลางวัน" maxlength="120"><input id="ct" list="cl" placeholder="หมวดหมู่ (ไม่บังคับ)" maxlength="60">${catList()}
+ <label class="f" id="fal"><span id="fl">จ่ายจากบัญชี</span><select id="fa">${opts(S.accts,pre.accountId)}</select></label><label class="f hide" id="tal"><span id="tl">เข้าบัญชี</span><select id="ta">${opts(S.accts,pre.accountId)}</select></label>
+ <label class="f"><span>วันที่และเวลา</span><input id="dt" type="datetime-local" value="${loc}"></label><input id="nt" placeholder="โน้ต (ไม่บังคับ)" maxlength="500">${saveBtn('บันทึก','saveTx')}`);
+ setTimeout(()=>$('am')?.focus(),50);addType(S.addType)}
+function addType(k){S.addType=k;document.querySelectorAll('[data-a=addType]').forEach(b=>b.classList.toggle('on',b.dataset.k===k));
+ $('fal').classList.toggle('hide',k==='INCOME');$('tal').classList.toggle('hide',k==='EXPENSE');$('fl').textContent=k==='TRANSFER'?'จากบัญชี':'จ่ายจากบัญชี';$('tl').textContent=k==='TRANSFER'?'ไปยังบัญชี':'เข้าบัญชี';
+ $('ti').placeholder=k==='EXPENSE'?'จ่ายอะไร เช่น ข้าวกลางวัน':k==='INCOME'?'รับอะไร เช่น เงินเดือน':'เช่น เติมเงินกระเป๋า'}
+function openTx(id){const t=S.tx.get(id);if(!t)return;const v=t.status==='VOID';
+ sheet(`<h3>${esc(t.title)}</h3><div class="m">${TL[t.type]} · ${new Date(t.occurredAt).toLocaleString('th-TH',{dateStyle:'medium',timeStyle:'short'})} · ${t.type==='TRANSFER'?an(t.fromAccountId)+' → '+an(t.toAccountId):an(t.fromAccountId||t.toAccountId)}${v?' · ยกเลิกแล้ว':''}</div>
+ ${v?'':`<label class="f"><span>จำนวนเงิน (บาท)</span><input id="eam" inputmode="decimal" value="${t.amount}"></label><label class="f"><span>ชื่อรายการ</span><input id="eti" value="${esc(t.title)}" maxlength="120"></label>
+ <label class="f"><span>หมวดหมู่</span><input id="ect" list="cl" value="${esc(t.category||'')}" maxlength="60"></label>${catList()}<label class="f"><span>โน้ต</span><input id="ent" value="${esc(t.note||'')}" maxlength="500"></label>
+ ${saveBtn('บันทึกการแก้ไข','updTx',`data-id="${esc(id)}"`)}<button class="btn ghost danger save" data-a="arm" data-then="voidTx" data-id="${esc(id)}"><span class="onl">ยกเลิกรายการนี้</span><span class="offl">ออฟไลน์</span></button>
+ <p class="m" style="margin-top:8px">การยกเลิกไม่ลบรายการ แต่ไม่นับในยอดอีกต่อไป</p>`}`)}
+const acctForm=(a={})=>`<label class="f"><span>ชื่อบัญชี</span><input id="an" value="${esc(a.n||'')}" placeholder="เช่น บัญชีเงินเดือน" maxlength="80"></label><label class="f"><span>ประเภท</span><select id="ak">${KINDS.map(k=>`<option${k===a.k?' selected':''}>${k}</option>`).join('')}</select></label>`;
+
+/* ---------- การกระทำทั้งหมด (event delegation) ---------- */
+const A={
+ tab:d=>tab(d.v),go:d=>push(d.v),back:()=>{S.stack.pop();render()},add:()=>openAdd(cur().v==='acct'?{accountId:S.curAcct}:{}),
+ acct:d=>push('acct',d.id),tx:d=>openTx(d.id),addType:d=>addType(d.k),
+ txType:d=>{S.txf.type=d.k;render()},txMonth:d=>{S.txf.month=monthShift(S.txf.month||thisMonth(),+d.d);render()},per:d=>{S.per=d.k;render()},
+ ckMonth:d=>{S.ckm=monthShift(S.ckm||thisMonth(),+d.d);render()},
+ arm:(d,el)=>{if(el.classList.contains('armed')){A[d.then](d,el);return}el.classList.add('armed');el.querySelector?.('.onl')?(el.querySelector('.onl').textContent='แตะอีกครั้งเพื่อยืนยัน'):(el.textContent='แตะอีกครั้งเพื่อยืนยัน')},
+ authMode:d=>{S.mode=d.m;$('m-login').classList.toggle('on',d.m==='login');$('m-register').classList.toggle('on',d.m==='register');
+  $('go').querySelector('.onl').textContent=d.m==='login'?'เข้าสู่ระบบ':'สร้างบัญชี';$('pw').autocomplete=d.m==='login'?'current-password':'new-password';
+  $('ahint').textContent=d.m==='login'?'ข้อมูลของแต่ละบัญชีแยกจากกัน คนอื่นมองไม่เห็นรายการของคุณ':'สมัครฟรี ใช้อีเมลและรหัสผ่านอย่างน้อย 10 ตัวอักษร'},
+ authGo:async()=>{try{await api('/api/auth/'+S.mode,'POST',{email:$('em').value.trim(),password:$('pw').value});$('pw').value='';await boot()}catch(e){toast(e.message)}},
+ logout:async()=>{try{await api('/api/auth/logout','POST',{})}catch{}S.stack=[{v:'home'}];show('auth')},
+ newAcct:()=>sheet(`<h3>เพิ่มบัญชี</h3>${acctForm()}<label class="f"><span>ยอดตั้งต้น (บาท)</span><input id="ao" inputmode="decimal" value="0"></label>${saveBtn('เพิ่มบัญชี','saveAcct')}`),
+ editAcct:d=>sheet(`<h3>แก้ไขบัญชี</h3>${acctForm(d)}${saveBtn('บันทึก','saveAcct',`data-id="${esc(d.id)}"`)}`),
+ saveAcct:d=>run(async()=>{const b={name:$('an').value,kind:$('ak').value};if(d.id)await api('/api/accounts/'+d.id,'PUT',b);else await api('/api/accounts','POST',{...b,opening:num($('ao').value||0)+''});closeSheet();toast(d.id?'บันทึกแล้ว':'เพิ่มบัญชีแล้ว');reload()}),
+ saveTx:()=>run(async()=>{const t=S.addType,ct=$('ct').value.trim(),b={type:t,amount:$('am').value.replace(/,/g,'').trim(),title:$('ti').value.trim()||ct||(t==='TRANSFER'?'โอนเงิน':TL[t]),occurredAt:new Date($('dt').value).toISOString(),idempotencyKey:S.key};
+  if(!b.amount)throw Error('กรอกจำนวนเงิน');if(ct)b.category=ct;if($('nt').value)b.note=$('nt').value;if(t!=='INCOME')b.fromAccountId=$('fa').value;if(t!=='EXPENSE')b.toAccountId=$('ta').value;
+  await api('/api/transactions','POST',b);closeSheet();toast('บันทึกแล้ว');if(ct&&!S.cats.includes(ct))S.cats.push(ct);reload()}),
+ updTx:d=>run(async()=>{await api('/api/transactions/'+d.id,'PUT',{amount:$('eam').value.replace(/,/g,''),title:$('eti').value,category:$('ect').value||null,note:$('ent').value||null});closeSheet();toast('แก้ไขแล้ว');reload()}),
+ voidTx:d=>run(async()=>{await api('/api/transactions/'+d.id,'DELETE');closeSheet();toast('ยกเลิกรายการแล้ว');reload()}),
+ /* เช็คลิสต์ */
+ ckTap:d=>{if(d.s==='paid')return sheet(`<h3>${esc(d.n)}</h3><p class="m">จ่ายแล้ว ฿${fmt(d.pd)} ต้องการยกเลิกการจ่ายใช่ไหม รายจ่ายที่ผูกไว้จะถูกยกเลิกและยอดบัญชีจะกลับมา</p><button class="btn ghost danger save" data-a="arm" data-then="unpay" data-id="${esc(d.id)}"><span class="onl">ยกเลิกการจ่าย</span><span class="offl">ออฟไลน์</span></button>`);
+  const left=Math.max(0,num(d.am)-num(d.pd));S.key=crypto.randomUUID();
+  sheet(`<h3>${esc(d.n)}</h3><div class="m">ยอด ฿${fmt(d.am)}${num(d.pd)?' · จ่ายแล้ว ฿'+fmt(d.pd):''}</div><label class="f"><span>จ่ายครั้งนี้ (บาท) — แก้เป็นจ่ายบางส่วนได้</span><input id="pa" inputmode="decimal" value="${left.toFixed(2)}"></label>
+  <label class="f"><span>จ่ายจากบัญชี</span><select id="pc">${opts(S.accts)}</select></label>${saveBtn('จ่ายแล้ว','pay',`data-id="${esc(d.id)}"`)}`)},
+ pay:d=>run(async()=>{await api(`/api/checklist/${d.id}/pay`,'POST',{accountId:$('pc').value,amount:$('pa').value.replace(/,/g,''),idempotencyKey:S.key});closeSheet();toast('บันทึกการจ่ายแล้ว');reload()}),
+ unpay:d=>run(async()=>{await api(`/api/checklist/${d.id}/unpay`,'POST',{});closeSheet();toast('ยกเลิกการจ่ายแล้ว');reload()}),
+ ckEdit:d=>sheet(`<h3>แก้รายการของเดือนนี้</h3><label class="f"><span>ชื่อ</span><input id="cn" value="${esc(d.n)}" maxlength="80"></label><label class="f"><span>ยอดเดือนนี้ (บาท) — เช่น ค่าน้ำ-ไฟที่ไม่เท่ากันทุกเดือน</span><input id="ca" inputmode="decimal" value="${d.am}"></label>
+  ${saveBtn('บันทึก','ckSave',`data-id="${esc(d.id)}"`)}<button class="btn ghost danger" data-a="arm" data-then="ckDel" data-id="${esc(d.id)}">ลบรายการนี้ออกจากเดือนนี้</button>`),
+ ckSave:d=>run(async()=>{await api('/api/checklist/'+d.id,'PUT',{name:$('cn').value,amount:$('ca').value.replace(/,/g,'')});closeSheet();reload()}),
+ ckDel:d=>run(async()=>{await api('/api/checklist/'+d.id,'DELETE');closeSheet();reload()}),
+ ckAdd:()=>sheet(`<h3>เพิ่มรายการเดือน ${monthName(S.ckm||thisMonth())}</h3><label class="f"><span>ชื่อรายการ</span><input id="cn" placeholder="เช่น ค่าประกันรถ" maxlength="80"></label><label class="f"><span>ยอด (บาท)</span><input id="ca" inputmode="decimal"></label>
+  <label class="f"><span>ครบกำหนดวันที่</span><select id="cd">${Array.from({length:31},(_,i)=>`<option>${i+1}</option>`).join('')}</select></label>${saveBtn('เพิ่ม','ckNew')}<p class="m" style="margin-top:8px">ถ้าต้องจ่ายทุกเดือน ให้เพิ่มที่ “บิลประจำ” แทน</p>`),
+ ckNew:()=>run(async()=>{await api('/api/checklist','POST',{month:S.ckm||thisMonth(),name:$('cn').value,amount:$('ca').value.replace(/,/g,''),day:+$('cd').value});closeSheet();reload()}),
+ /* บิลประจำ */
+ billEdit:d=>sheet(`<h3>${d.id?'แก้ไขบิลประจำ':'เพิ่มบิลประจำ'}</h3><label class="f"><span>ชื่อ</span><input id="bn" value="${esc(d.n||'')}" placeholder="เช่น ค่าห้อง" maxlength="80"></label><label class="f"><span>ยอดต่อเดือน (บาท)</span><input id="ba" inputmode="decimal" value="${d.am||''}"></label>
+  <label class="f"><span>ครบกำหนดทุกวันที่</span><select id="bd">${Array.from({length:31},(_,i)=>`<option${(+d.d||1)===i+1?' selected':''}>${i+1}</option>`).join('')}</select></label><label class="f"><span>หมวดหมู่ (ไม่บังคับ)</span><input id="bc" list="cl" value="${esc(d.c||'')}"></label>${catList()}
+  <label class="f"><span>จ่ายจากบัญชี (ไม่บังคับ)</span><select id="bb"><option value="">เลือกตอนจ่าย</option>${opts(S.accts,d.ac)}</select></label>${saveBtn('บันทึก','billSave',`data-id="${esc(d.id)}"`)}
+  ${d.id?`<button class="btn ghost danger" data-a="arm" data-then="billDel" data-id="${esc(d.id)}">ลบบิลประจำนี้</button><p class="m">รายการที่จ่ายไปแล้วในอดีตยังอยู่ครบ</p>`:''}`),
+ billSave:d=>run(async()=>{const b={name:$('bn').value,amount:$('ba').value.replace(/,/g,''),dayOfMonth:+$('bd').value,category:$('bc').value||null,accountId:$('bb').value||null};
+  await api(d.id?'/api/bill-templates/'+d.id:'/api/bill-templates',d.id?'PUT':'POST',b);closeSheet();toast('บันทึกแล้ว');reload()}),
+ billDel:d=>run(async()=>{await api('/api/bill-templates/'+d.id,'DELETE');closeSheet();reload()}),
+ /* งบ */
+ editBudget:d=>sheet(`<h3>${d.c?'แก้งบ '+esc(d.c):'ตั้งงบหมวดใหม่'}</h3>${d.c?'':`<input id="bc" list="cl" placeholder="หมวดหมู่ เช่น อาหาร" maxlength="60">${catList()}`}<label class="f"><span>งบต่อเดือน (บาท)</span><input id="bam" inputmode="decimal" value="${d.am||''}"></label>
+  ${saveBtn('บันทึกงบ','saveBudget',`data-c="${esc(d.c)}"`)}${d.c?`<button class="btn ghost danger" data-a="arm" data-then="stopBudget" data-c="${esc(d.c)}">เลิกใช้งบหมวดนี้</button>`:''}`),
+ saveBudget:d=>run(async()=>{await api('/api/budgets','PUT',{category:d.c||$('bc').value.trim(),amount:$('bam').value.replace(/,/g,'')});closeSheet();reload()}),
+ stopBudget:d=>run(async()=>{await api('/api/budgets','PUT',{category:d.c,amount:'0'});closeSheet();reload()}),
+ /* เป้าหมาย */
+ goalEdit:d=>{const sv=[...S.accts].sort((a,b)=>(b.kind==='เงินออม')-(a.kind==='เงินออม'));sheet(`<h3>${d.id?'แก้ไขเป้าหมาย':'เพิ่มเป้าหมาย'}</h3><label class="f"><span>ชื่อเป้าหมาย</span><input id="gn" value="${esc(d.n||'')}" placeholder="เช่น เที่ยวญี่ปุ่น" maxlength="80"></label>
+  <label class="f"><span>เป้า (บาท)</span><input id="gt" inputmode="decimal" value="${d.t||''}"></label><label class="f"><span>เก็บในบัญชี</span><select id="ga">${opts(sv,d.ac)}</select></label>${saveBtn('บันทึก','goalSave',`data-id="${esc(d.id||'')}"`)}
+  ${d.id?`<button class="btn ghost danger" data-a="arm" data-then="goalDel" data-id="${esc(d.id)}">ลบเป้าหมาย</button>`:''}`)},
+ goalSave:d=>run(async()=>{const b={name:$('gn').value,target:$('gt').value.replace(/,/g,''),accountId:$('ga').value};await api(d.id?'/api/goals/'+d.id:'/api/goals',d.id?'PUT':'POST',b);closeSheet();reload()}),
+ goalDel:d=>run(async()=>{await api('/api/goals/'+d.id,'DELETE');closeSheet();reload()}),
+ goalDeposit:d=>{S.key=crypto.randomUUID();sheet(`<h3>ฝากเข้า “${esc(d.n)}”</h3><label class="f"><span>จำนวนเงิน (บาท)</span><input id="da" class="amt" inputmode="decimal" placeholder="0.00"></label>
+  <label class="f"><span>โอนจากบัญชี</span><select id="df">${opts(S.accts.filter(a=>a.id!==d.ac))}</select></label>${saveBtn('ฝากเงิน','goalPut',`data-ac="${esc(d.ac)}" data-n="${esc(d.n)}"`)}<p class="m" style="margin-top:8px">เป็นการโอนระหว่างบัญชี ไม่นับเป็นรายจ่าย</p>`)},
+ goalPut:d=>run(async()=>{if(!$('df').value)throw Error('ต้องมีบัญชีอื่นสำหรับโอนเข้า');await api('/api/transactions','POST',{type:'TRANSFER',amount:$('da').value.replace(/,/g,''),title:'ออมเข้า '+d.n,fromAccountId:$('df').value,toAccountId:d.ac,occurredAt:new Date().toISOString(),idempotencyKey:S.key});closeSheet();toast('ฝากเงินแล้ว');reload()}),
+ /* เงินเดือน */
+ saveSalary:()=>run(async()=>{await api('/api/salary','PUT',{amount:$('sm').value.replace(/,/g,''),payDay:+$('sd').value,accountId:$('sc').value,title:$('st').value||'เงินเดือน',active:$('sa').checked});toast('บันทึกแล้ว');reload()}),
+ delSalary:()=>run(async()=>{await api('/api/salary','DELETE');toast('ลบการตั้งค่าแล้ว');reload()})
+};
+let busy=false;
+async function run(f){if(busy)return;busy=true;try{await f()}catch(e){toast(e.message)}finally{busy=false}}
+document.addEventListener('click',e=>{const el=e.target.closest('[data-a]');if(el&&A[el.dataset.a])A[el.dataset.a](el.dataset,el)});
+document.addEventListener('keydown',e=>{if(e.key==='Enter'&&e.target.matches('#em,#pw'))A.authGo()});
+
+/* ---------- ออนไลน์/ออฟไลน์: ขณะออฟไลน์บันทึกไม่ได้และแจ้งเตือน ---------- */
+function net(){const off=!navigator.onLine;document.body.classList.toggle('offline',off)}
+addEventListener('offline',()=>{net();toast('ออฟไลน์ — บันทึกไม่ได้จนกว่าจะเชื่อมต่ออีกครั้ง',5000)});
+addEventListener('online',()=>{net();toast('กลับมาออนไลน์แล้ว');if(!$('app').classList.contains('hide'))reload()});
+async function boot(){net();try{S.me=await api('/api/me');show('app');api('/api/categories').then(c=>{S.cats=[...new Set([...DEF_CATS,...c])]}).catch(()=>{});render()}catch{show('auth')}}
 if('serviceWorker'in navigator)navigator.serviceWorker.register('/sw.js');boot();
 </script></body></html>

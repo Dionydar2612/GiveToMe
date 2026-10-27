@@ -5,7 +5,9 @@
  "scripts": {
   "test": "vitest run",
   "build": "prisma generate && tsc",
-  "start": "prisma db push --skip-generate && node dist/server.js"
+  "start": "prisma db push --skip-generate && node dist/server.js",
+  "backup": "bash scripts/backup.sh",
+  "restore": "bash scripts/restore.sh"
  },
  "dependencies": {
   "decimal.js": "^10.4.3",

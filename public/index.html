@@ -1,0 +1,88 @@
+<!doctype html><html lang="th"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Givetome</title><link rel="manifest" href="/manifest.webmanifest">
+<meta name="theme-color" content="#14532d"><meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Givetome"><link rel="apple-touch-icon" href="/icon-180.png">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@400;600&display=swap" rel="stylesheet">
+<style>
+:root{--g:#14532d;--g2:#dcfce7;--bg:#f4f5f4;--t:#1a1a1a;--m:#6b7280;--r:#b91c1c}
+@media(prefers-color-scheme:dark){:root{--bg:#111;--t:#eee;--m:#9ca3af;--g2:#14301f}body{background:var(--bg)}.card,dialog,input,select{background:#1c1c1c!important;color:var(--t)!important}}
+*{box-sizing:border-box}body{margin:0;font-family:'Noto Sans Thai',system-ui,sans-serif;background:var(--bg);color:var(--t);padding-top:env(safe-area-inset-top);padding-bottom:calc(72px + env(safe-area-inset-bottom))}
+header{background:var(--g);color:#fff;padding:14px 16px;font-weight:600;font-size:18px}
+main{padding:12px;max-width:640px;margin:auto}.card{background:#fff;border-radius:14px;padding:14px;margin-bottom:12px;box-shadow:0 1px 3px #0001}
+.big{font-size:26px;font-weight:600;color:var(--g)}.m{color:var(--m);font-size:13px}.row{display:flex;justify-content:space-between;gap:8px;align-items:center;padding:8px 0;border-bottom:1px solid #0001}
+.in{color:var(--g)}.out{color:var(--r)}
+nav{position:fixed;bottom:0;left:0;right:0;display:flex;background:#fff;border-top:1px solid #0002;padding-bottom:env(safe-area-inset-bottom)}
+nav button{flex:1;border:0;background:none;padding:12px 4px;font:inherit;font-size:13px;color:var(--m)}nav button.on{color:var(--g);font-weight:600}
+.fab{position:fixed;right:16px;bottom:calc(76px + env(safe-area-inset-bottom));width:56px;height:56px;border-radius:50%;border:0;background:var(--g);color:#fff;font-size:30px;box-shadow:0 3px 8px #0004}
+input,select,button.b{width:100%;padding:12px;margin:5px 0;border:1px solid #0003;border-radius:10px;font:inherit;font-size:16px}
+button.b{background:var(--g);color:#fff;border:0}button.s{background:none;color:var(--g);border:1px solid var(--g)}
+dialog{border:0;border-radius:16px;width:92%;max-width:420px;padding:16px}dialog::backdrop{background:#0006}
+#toast{position:fixed;top:calc(8px + env(safe-area-inset-top));left:50%;transform:translateX(-50%);background:#222;color:#fff;padding:10px 16px;border-radius:20px;display:none;z-index:9}
+#off{display:none;background:#b45309;color:#fff;text-align:center;padding:6px;font-size:13px}.hide{display:none!important}
+</style></head><body>
+<div id="toast"></div><div id="off">ออฟไลน์ — จะบันทึกรายการไม่ได้จนกว่าจะเชื่อมต่อ</div>
+<section id="auth" class="hide"><header>Givetome</header><main><div class="card">
+<p class="m" id="amsg">เข้าสู่ระบบ</p><input id="em" type="email" placeholder="อีเมล" autocomplete="username">
+<input id="pw" type="password" placeholder="รหัสผ่าน (อย่างน้อย 10 ตัวอักษร)" autocomplete="current-password">
+<button class="b" id="login">เข้าสู่ระบบ</button><button class="b s" id="reg">สร้างบัญชีผู้ดูแล (ครั้งแรกเท่านั้น)</button></div></main></section>
+<section id="app" class="hide"><header id="ttl"></header><main id="v"></main>
+<button class="fab" id="add" aria-label="เพิ่มรายการ">+</button>
+<nav><button data-v="dash">ภาพรวม</button><button data-v="txs">สมุดบัญชี</button><button data-v="accts">บัญชี</button><button data-v="set">ตั้งค่า</button></nav></section>
+<dialog id="dlg"><form method="dialog" id="f"><h3 style="margin:0 0 6px;color:var(--g)">เพิ่มรายการ</h3>
+<select id="ty"><option value="EXPENSE">รายจ่าย</option><option value="INCOME">รายรับ (เงินเดือน/โบนัส)</option><option value="TRANSFER">โอน/เติมเงินระหว่างบัญชี</option></select>
+<input id="ti" placeholder="ชื่อรายการ เช่น เงินเดือน, ค่าห้อง" required maxlength="120">
+<input id="am" inputmode="decimal" placeholder="จำนวนเงิน (บาท)" required>
+<select id="fa"></select><select id="ta"></select><input id="dt" type="datetime-local" required>
+<button class="b" id="sv" type="submit">บันทึก</button><button class="b s" type="button" id="cx">ยกเลิก</button></form></dialog>
+<script>
+const $=id=>document.getElementById(id),esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const fmt=s=>Number(s).toLocaleString('th-TH',{minimumFractionDigits:2,maximumFractionDigits:2}),TL={INCOME:'รายรับ',EXPENSE:'รายจ่าย',TRANSFER:'โอน',REFUND:'รับคืน',ADJUST:'ปรับยอด'};
+let view='dash',accts=[],tot={income:'0',expense:'0'},busy=false;
+function toast(m){const t=$('toast');t.textContent=m;t.style.display='block';setTimeout(()=>t.style.display='none',3000)}
+async function api(p,m='GET',b){if(!navigator.onLine)throw Error('ออฟไลน์ ไม่สามารถบันทึกได้');
+ const r=await fetch(p,{method:m,credentials:'same-origin',headers:b?{'Content-Type':'application/json'}:{},body:b?JSON.stringify(b):undefined});
+ if(r.status===401){show('auth');throw Error('กรุณาเข้าสู่ระบบ')}const j=await r.json().catch(()=>({}));if(!r.ok)throw Error(j.error||'เกิดข้อผิดพลาด');return j}
+function show(w){$('auth').classList.toggle('hide',w!=='auth');$('app').classList.toggle('hide',w!=='app')}
+async function auth(path){try{await api(path,'POST',{email:$('em').value,password:$('pw').value});await boot()}catch(e){toast(e.message.includes('details')?'ข้อมูลไม่ถูกต้อง (รหัสผ่านอย่างน้อย 10 ตัว)':e.message)}}
+$('login').onclick=()=>auth('/api/auth/login');$('reg').onclick=()=>auth('/api/auth/register');
+async function load(){const a=await api('/api/accounts');accts=a.accounts;tot=a.totals}
+const an=id=>esc((accts.find(a=>a.id===id)||{}).name||'-');
+async function render(){document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('on',b.dataset.v===view));
+ const v=$('v');$('ttl').textContent={dash:'ภาพรวม',txs:'สมุดบัญชี',accts:'บัญชีของฉัน',set:'ตั้งค่า'}[view];v.innerHTML='<p class="m">กำลังโหลด…</p>';
+ try{await load();
+ if(view==='dash'){const real=accts.reduce((s,a)=>s+Number(a.balance),0).toFixed(2),tx=(await api('/api/transactions')).slice(0,6);
+  v.innerHTML=`<div class="card"><div class="m">ยอดเงินจริงรวมทุกบัญชี (ตามที่บันทึกไว้)</div><div class="big">฿${fmt(real)}</div></div>
+  <div class="card"><div class="row"><span>รายรับจริง</span><b class="in">฿${fmt(tot.income)}</b></div><div class="row"><span>รายจ่ายจริง</span><b class="out">฿${fmt(tot.expense)}</b></div>
+  <div class="m">การโอนระหว่างบัญชีไม่นับเป็นรายรับ/รายจ่าย • งบประมาณยังไม่เปิดใช้ในเวอร์ชันนี้</div></div>
+  <div class="card"><b>รายการล่าสุด</b>${tx.length?tx.map(row).join(''):'<p class="m">ยังไม่มีรายการ กดปุ่ม + เพื่อเริ่มบันทึก</p>'}</div>`}
+ else if(view==='txs'){v.innerHTML=`<input id="q" placeholder="ค้นหาชื่อรายการ"><select id="tf"><option value="">ทุกประเภท</option>${Object.entries(TL).map(([k,t])=>`<option value="${k}">${t}</option>`).join('')}</select><div class="card" id="list"></div>`;
+  const go=async()=>{const p=new URLSearchParams();if($('q').value)p.set('search',$('q').value);if($('tf').value)p.set('type',$('tf').value);
+   const tx=await api('/api/transactions?'+p);$('list').innerHTML=tx.length?tx.map(row).join(''):'<p class="m">ไม่พบรายการ</p>';
+   $('list').querySelectorAll('[data-id]').forEach(e=>e.onclick=()=>act(e.dataset.id,e.dataset.t,e.dataset.a,e.dataset.s))};
+  $('q').oninput=go;$('tf').onchange=go;go()}
+ else if(view==='accts'){v.innerHTML=`<div class="card">${accts.length?accts.map(a=>`<div class="row"><span>${esc(a.name)}<br><span class="m">${esc(a.kind)}</span></span><b>฿${fmt(a.balance)}</b></div>`).join(''):'<p class="m">ยังไม่มีบัญชี เพิ่มบัญชีแรกด้านล่าง</p>'}</div>
+  <div class="card"><b>เพิ่มบัญชี</b><input id="an" placeholder="ชื่อบัญชี เช่น บัญชีเงินเดือน"><select id="ak"><option>เงินเดือน</option><option>ใช้จ่าย</option><option>เงินออม</option><option>เงินสด</option><option>กระเป๋าเงิน</option></select><input id="ao" inputmode="decimal" placeholder="ยอดตั้งต้น (บาท)" value="0"><button class="b" id="aa">เพิ่มบัญชี</button></div>`;
+  $('aa').onclick=async()=>{try{await api('/api/accounts','POST',{name:$('an').value,kind:$('ak').value,opening:$('ao').value});toast('เพิ่มบัญชีแล้ว');render()}catch(e){toast(e.message)}}}
+ else v.innerHTML=`<div class="card"><b>ติดตั้งบน iPhone</b><p class="m">เปิดด้วย Safari → ปุ่มแชร์ → “เพิ่มลงในหน้าจอโฮม”</p></div>
+  <div class="card"><a href="/api/export/transactions.csv" download><button class="b s" type="button">ส่งออกธุรกรรม CSV</button></a><button class="b s" id="lo">ออกจากระบบ</button></div>`;
+  if(view==='set')$('lo').onclick=async()=>{await api('/api/auth/logout','POST',{});show('auth')}
+ }catch(e){v.innerHTML=`<div class="card out">${esc(e.message)}</div>`}}
+function row(t){const s=t.status==='VOID',c=t.type==='EXPENSE'?'out':t.type==='TRANSFER'?'':'in',sg=t.type==='EXPENSE'?'-':t.type==='TRANSFER'?'':'+';
+ return `<div class="row" data-id="${t.id}" data-t="${esc(t.title)}" data-a="${t.amount}" data-s="${t.status}" style="${s?'opacity:.45;text-decoration:line-through':''}"><span>${esc(t.title)}<br><span class="m">${TL[t.type]} • ${new Date(t.occurredAt).toLocaleDateString('th-TH')} • ${t.type==='TRANSFER'?an(t.fromAccountId)+'→'+an(t.toAccountId):an(t.fromAccountId||t.toAccountId)}${s?' • ยกเลิกแล้ว':''}</span></span><b class="${c}">${sg}${fmt(t.amount)}</b></div>`}
+async function act(id,title,amt,st){if(st==='VOID')return;const ch=prompt('แก้ไขจำนวนเงิน (เว้นว่าง = ไม่แก้)\nพิมพ์ DELETE เพื่อยกเลิกรายการนี้',amt);if(ch===null||ch===''||ch===amt)return;
+ try{if(ch==='DELETE'){if(!confirm('ยืนยันยกเลิกรายการ “'+title+'” ? ยอดบัญชีจะถูกคำนวณใหม่'))return;await api('/api/transactions/'+id,'DELETE');}else await api('/api/transactions/'+id,'PUT',{amount:ch,title});toast('สำเร็จ');render()}catch(e){toast(e.message)}}
+const loc=()=>{const d=new Date();d.setMinutes(d.getMinutes()-d.getTimezoneOffset());return d.toISOString().slice(0,16)};
+function sync(){const t=$('ty').value;const o=accts.map(a=>`<option value="${a.id}">${esc(a.name)}</option>`).join('');
+ $('fa').innerHTML=o;$('ta').innerHTML=o;$('fa').style.display=t==='INCOME'?'none':'';$('ta').style.display=t==='EXPENSE'?'none':''}
+$('ty').onchange=sync;$('cx').onclick=()=>$('dlg').close();
+$('add').onclick=()=>{if(!accts.length){toast('กรุณาเพิ่มบัญชีก่อน');view='accts';render();return}sync();$('dt').value=loc();$('f').dataset.key=crypto.randomUUID();$('dlg').showModal()};
+$('f').onsubmit=async e=>{e.preventDefault();if(busy)return;busy=true;$('sv').disabled=true;const t=$('ty').value;
+ const b={type:t,title:$('ti').value,amount:$('am').value.replace(/,/g,''),occurredAt:new Date($('dt').value).toISOString(),idempotencyKey:$('f').dataset.key};
+ if(t!=='INCOME')b.fromAccountId=$('fa').value;if(t!=='EXPENSE')b.toAccountId=$('ta').value;
+ try{await api('/api/transactions','POST',b);$('dlg').close();$('f').reset();toast('บันทึกลงฐานข้อมูลแล้ว');render()}catch(er){toast(er.message)}finally{busy=false;$('sv').disabled=false}};
+document.querySelectorAll('nav button').forEach(b=>b.onclick=()=>{view=b.dataset.v;render()});
+addEventListener('online',()=>$('off').style.display='none');addEventListener('offline',()=>$('off').style.display='block');
+async function boot(){try{await api('/api/me');show('app');render()}catch{show('auth')}}
+if('serviceWorker'in navigator)navigator.serviceWorker.register('/sw.js');boot();
+</script></body></html>

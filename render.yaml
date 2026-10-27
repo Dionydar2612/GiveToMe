@@ -1,0 +1,15 @@
+databases:
+  - name: givetome-db
+    plan: free
+services:
+  - type: web
+    name: givetome
+    runtime: node
+    buildCommand: npm install --include=dev && npm run build
+    startCommand: npm start
+    healthCheckPath: /health
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase: {name: givetome-db, property: connectionString}
+      - key: SESSION_SECRET
+        generateValue: true

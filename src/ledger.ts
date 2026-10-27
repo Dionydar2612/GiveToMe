@@ -1,4 +1,4 @@
-import Decimal from 'decimal.js';
+import { Decimal } from 'decimal.js';
 export type Tx={id:string;type:'income'|'expense'|'transfer'|'refund'|'adjust';amount:string;from?:string;to?:string;status:'posted'|'void'};
 export function balance(acc:string,opening:string,txs:Tx[]):string{
   let b=new Decimal(opening);

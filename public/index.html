@@ -28,17 +28,17 @@ dialog{border:0;border-radius:16px;width:92%;max-width:420px;padding:16px}dialog
 <button class="b" id="login">เข้าสู่ระบบ</button><button class="b s" id="reg">สร้างบัญชีผู้ดูแล (ครั้งแรกเท่านั้น)</button></div></main></section>
 <section id="app" class="hide"><header id="ttl"></header><main id="v"></main>
 <button class="fab" id="add" aria-label="เพิ่มรายการ">+</button>
-<nav><button data-v="dash">ภาพรวม</button><button data-v="txs">สมุดบัญชี</button><button data-v="accts">บัญชี</button><button data-v="set">ตั้งค่า</button></nav></section>
+<nav><button data-v="dash">ภาพรวม</button><button data-v="txs">สมุดบัญชี</button><button data-v="ana">วิเคราะห์</button><button data-v="accts">บัญชี</button><button data-v="set">ตั้งค่า</button></nav></section>
 <dialog id="dlg"><form method="dialog" id="f"><h3 style="margin:0 0 6px;color:var(--g)">เพิ่มรายการ</h3>
 <select id="ty"><option value="EXPENSE">รายจ่าย</option><option value="INCOME">รายรับ (เงินเดือน/โบนัส)</option><option value="TRANSFER">โอน/เติมเงินระหว่างบัญชี</option></select>
 <input id="ti" placeholder="ชื่อรายการ เช่น เงินเดือน, ค่าห้อง" required maxlength="120">
-<input id="am" inputmode="decimal" placeholder="จำนวนเงิน (บาท)" required>
+<input id="am" inputmode="decimal" placeholder="จำนวนเงิน (บาท)" required><input id="ct" list="cl" placeholder="หมวดหมู่ เช่น อาหาร, เดินทาง" maxlength="60"><datalist id="cl"><option>อาหาร</option><option>เดินทาง</option><option>ค่าห้อง/น้ำไฟ</option><option>ค่าโทรศัพท์/เน็ต</option><option>ซื้อของ</option><option>ผ่อนหนี้</option><option>ความบันเทิง</option><option>สุขภาพ</option><option>การเรียน</option><option>เงินออม</option><option>เงินเดือน</option><option>อื่น ๆ</option></datalist><input id="nt" placeholder="โน้ต: จ่ายอะไร ที่ไหน จ่ายด้วยวิธีไหน" maxlength="500">
 <select id="fa"></select><select id="ta"></select><input id="dt" type="datetime-local" required>
 <button class="b" id="sv" type="submit">บันทึก</button><button class="b s" type="button" id="cx">ยกเลิก</button></form></dialog>
 <script>
 const $=id=>document.getElementById(id),esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const fmt=s=>Number(s).toLocaleString('th-TH',{minimumFractionDigits:2,maximumFractionDigits:2}),TL={INCOME:'รายรับ',EXPENSE:'รายจ่าย',TRANSFER:'โอน',REFUND:'รับคืน',ADJUST:'ปรับยอด'};
-let view='dash',accts=[],tot={income:'0',expense:'0'},busy=false;
+let per='m',view='dash',accts=[],tot={income:'0',expense:'0'},busy=false;
 function toast(m){const t=$('toast');t.textContent=m;t.style.display='block';setTimeout(()=>t.style.display='none',3000)}
 async function api(p,m='GET',b){if(!navigator.onLine)throw Error('ออฟไลน์ ไม่สามารถบันทึกได้');
  const r=await fetch(p,{method:m,credentials:'same-origin',headers:b?{'Content-Type':'application/json'}:{},body:b?JSON.stringify(b):undefined});
@@ -49,11 +49,11 @@ $('login').onclick=()=>auth('/api/auth/login');$('reg').onclick=()=>auth('/api/a
 async function load(){const a=await api('/api/accounts');accts=a.accounts;tot=a.totals}
 const an=id=>esc((accts.find(a=>a.id===id)||{}).name||'-');
 async function render(){document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('on',b.dataset.v===view));
- const v=$('v');$('ttl').textContent={dash:'ภาพรวม',txs:'สมุดบัญชี',accts:'บัญชีของฉัน',set:'ตั้งค่า'}[view];v.innerHTML='<p class="m">กำลังโหลด…</p>';
+ const v=$('v');$('ttl').textContent={dash:'ภาพรวม',txs:'สมุดบัญชี',ana:'วิเคราะห์การใช้จ่าย',accts:'บัญชีของฉัน',set:'ตั้งค่า'}[view];v.innerHTML='<p class="m">กำลังโหลด…</p>';
  try{await load();
  if(view==='dash'){const real=accts.reduce((s,a)=>s+Number(a.balance),0).toFixed(2),tx=(await api('/api/transactions')).slice(0,6);
   v.innerHTML=`<div class="card"><div class="m">ยอดเงินจริงรวมทุกบัญชี (ตามที่บันทึกไว้)</div><div class="big">฿${fmt(real)}</div></div>
-  <div class="card"><div class="row"><span>รายรับจริง</span><b class="in">฿${fmt(tot.income)}</b></div><div class="row"><span>รายจ่ายจริง</span><b class="out">฿${fmt(tot.expense)}</b></div>
+  ${accts.length?'':'<div class="card"><b>เริ่มต้นใช้งาน</b><p class="m">1) แท็บ “บัญชี” → เพิ่มบัญชี 2) กดปุ่ม + เพื่อบันทึกรายรับ/รายจ่าย ใส่หมวดหมู่และโน้ต 3) ดูสรุปที่แท็บ “วิเคราะห์”</p></div>'}<div class="card"><div class="row"><span>รายรับจริง</span><b class="in">฿${fmt(tot.income)}</b></div><div class="row"><span>รายจ่ายจริง</span><b class="out">฿${fmt(tot.expense)}</b></div>
   <div class="m">การโอนระหว่างบัญชีไม่นับเป็นรายรับ/รายจ่าย • งบประมาณยังไม่เปิดใช้ในเวอร์ชันนี้</div></div>
   <div class="card"><b>รายการล่าสุด</b>${tx.length?tx.map(row).join(''):'<p class="m">ยังไม่มีรายการ กดปุ่ม + เพื่อเริ่มบันทึก</p>'}</div>`}
  else if(view==='txs'){v.innerHTML=`<input id="q" placeholder="ค้นหาชื่อรายการ"><select id="tf"><option value="">ทุกประเภท</option>${Object.entries(TL).map(([k,t])=>`<option value="${k}">${t}</option>`).join('')}</select><div class="card" id="list"></div>`;
@@ -61,15 +61,28 @@ async function render(){document.querySelectorAll('nav button').forEach(b=>b.cla
    const tx=await api('/api/transactions?'+p);$('list').innerHTML=tx.length?tx.map(row).join(''):'<p class="m">ไม่พบรายการ</p>';
    $('list').querySelectorAll('[data-id]').forEach(e=>e.onclick=()=>act(e.dataset.id,e.dataset.t,e.dataset.a,e.dataset.s))};
   $('q').oninput=go;$('tf').onchange=go;go()}
+ else if(view==='ana'){const P={t:'วันนี้',w:'7 วันล่าสุด',m:'เดือนนี้',y:'ปีนี้'};
+  v.innerHTML=`<select id="prd">${Object.entries(P).map(([k,t])=>`<option value="${k}"${k===per?' selected':''}>${t}</option>`).join('')}</select><div id="ab"><p class="m">กำลังโหลด…</p></div>`;
+  const go=async()=>{per=$('prd').value;const n=new Date(),s=new Date(n.getFullYear(),n.getMonth(),n.getDate());
+   if(per==='w')s.setDate(s.getDate()-6);if(per==='m')s.setDate(1);if(per==='y'){s.setMonth(0);s.setDate(1)}
+   const e=new Date(n.getFullYear(),n.getMonth(),n.getDate(),23,59,59),days=Math.max(1,Math.round((e-s)/864e5));
+   const d=await api('/api/summary?from='+encodeURIComponent(s.toISOString())+'&to='+encodeURIComponent(e.toISOString()));
+   const ex=Number(d.expense),mx=d.byCategory.length?Number(d.byCategory[0].amount):1,top=d.byCategory[0];
+   $('ab').innerHTML=`<div class="card"><div class="row"><span>รายรับ</span><b class="in">฿${fmt(d.income)}</b></div><div class="row"><span>รายจ่าย</span><b class="out">฿${fmt(d.expense)}</b></div><div class="row"><span>สุทธิ (รับ − จ่าย)</span><b>฿${fmt(d.net)}</b></div><div class="m">${d.count} รายการ • ไม่นับการโอนระหว่างบัญชี</div></div>
+   <div class="card"><b>ข้อสังเกต</b><p class="m">${ex?`ใช้จ่ายเฉลี่ยวันละ ฿${fmt(ex/days)}${top?` • หมวดที่ใช้มากสุดคือ “${esc(top.name)}” (${Math.round(Number(top.amount)/ex*100)}% ของรายจ่าย)`:''}`:'ยังไม่มีรายจ่ายในช่วงนี้'}${Number(d.net)<0?' • ช่วงนี้จ่ายมากกว่ารับ':''}</p></div>
+   <div class="card"><b>รายจ่ายตามหมวดหมู่</b>${d.byCategory.length?d.byCategory.map(c=>`<div style="margin:10px 0"><div class="row" style="border:0;padding:0"><span>${esc(c.name)}</span><span>฿${fmt(c.amount)} (${Math.round(Number(c.amount)/ex*100)}%)</span></div><div style="background:var(--g2);border-radius:6px;height:10px"><div style="background:var(--g);height:10px;border-radius:6px;width:${Math.max(2,Number(c.amount)/mx*100)}%"></div></div></div>`).join(''):'<p class="m">ไม่มีข้อมูล</p>'}</div>
+   <div class="card"><b>5 รายการจ่ายสูงสุด</b>${d.top.length?d.top.map(t=>`<div class="row"><span>${esc(t.title)}<br><span class="m">${esc(t.date)}${t.category?' • '+esc(t.category):''}${t.note?' • 📝 '+esc(t.note):''}</span></span><b class="out">฿${fmt(t.amount)}</b></div>`).join(''):'<p class="m">ไม่มีข้อมูล</p>'}</div>
+   <div class="card"><b>รายวัน</b>${d.byDay.length?d.byDay.slice().reverse().map(x=>`<div class="row"><span>${esc(x.date)}</span><span><span class="in">+${fmt(x.income)}</span> <span class="out">−${fmt(x.expense)}</span></span></div>`).join(''):'<p class="m">ไม่มีข้อมูล</p>'}</div>`};
+  $('prd').onchange=()=>go().catch(er=>toast(er.message));go()}
  else if(view==='accts'){v.innerHTML=`<div class="card">${accts.length?accts.map(a=>`<div class="row"><span>${esc(a.name)}<br><span class="m">${esc(a.kind)}</span></span><b>฿${fmt(a.balance)}</b></div>`).join(''):'<p class="m">ยังไม่มีบัญชี เพิ่มบัญชีแรกด้านล่าง</p>'}</div>
   <div class="card"><b>เพิ่มบัญชี</b><input id="an" placeholder="ชื่อบัญชี เช่น บัญชีเงินเดือน"><select id="ak"><option>เงินเดือน</option><option>ใช้จ่าย</option><option>เงินออม</option><option>เงินสด</option><option>กระเป๋าเงิน</option></select><input id="ao" inputmode="decimal" placeholder="ยอดตั้งต้น (บาท)" value="0"><button class="b" id="aa">เพิ่มบัญชี</button></div>`;
-  $('aa').onclick=async()=>{try{await api('/api/accounts','POST',{name:$('an').value,kind:$('ak').value,opening:$('ao').value});toast('เพิ่มบัญชีแล้ว');render()}catch(e){toast(e.message)}}}
+  $('aa').onclick=async()=>{try{await api('/api/accounts','POST',{name:$('an').value,kind:$('ak').value,opening:$('ao').value});toast('เพิ่มบัญชีแล้ว — กดปุ่ม + เพื่อบันทึกรายการ');render()}catch(e){toast(e.message)}}}
  else v.innerHTML=`<div class="card"><b>ติดตั้งบน iPhone</b><p class="m">เปิดด้วย Safari → ปุ่มแชร์ → “เพิ่มลงในหน้าจอโฮม”</p></div>
   <div class="card"><a href="/api/export/transactions.csv" download><button class="b s" type="button">ส่งออกธุรกรรม CSV</button></a><button class="b s" id="lo">ออกจากระบบ</button></div>`;
   if(view==='set')$('lo').onclick=async()=>{await api('/api/auth/logout','POST',{});show('auth')}
  }catch(e){v.innerHTML=`<div class="card out">${esc(e.message)}</div>`}}
 function row(t){const s=t.status==='VOID',c=t.type==='EXPENSE'?'out':t.type==='TRANSFER'?'':'in',sg=t.type==='EXPENSE'?'-':t.type==='TRANSFER'?'':'+';
- return `<div class="row" data-id="${t.id}" data-t="${esc(t.title)}" data-a="${t.amount}" data-s="${t.status}" style="${s?'opacity:.45;text-decoration:line-through':''}"><span>${esc(t.title)}<br><span class="m">${TL[t.type]} • ${new Date(t.occurredAt).toLocaleDateString('th-TH')} • ${t.type==='TRANSFER'?an(t.fromAccountId)+'→'+an(t.toAccountId):an(t.fromAccountId||t.toAccountId)}${s?' • ยกเลิกแล้ว':''}</span></span><b class="${c}">${sg}${fmt(t.amount)}</b></div>`}
+ return `<div class="row" data-id="${t.id}" data-t="${esc(t.title)}" data-a="${t.amount}" data-s="${t.status}" style="${s?'opacity:.45;text-decoration:line-through':''}"><span>${esc(t.title)}<br><span class="m">${TL[t.type]} • ${new Date(t.occurredAt).toLocaleDateString('th-TH')} • ${t.type==='TRANSFER'?an(t.fromAccountId)+'→'+an(t.toAccountId):an(t.fromAccountId||t.toAccountId)}${t.category?' • '+esc(t.category):''}${s?' • ยกเลิกแล้ว':''}</span>${t.note?'<br><span class="m">📝 '+esc(t.note)+'</span>':''}</span><b class="${c}">${sg}${fmt(t.amount)}</b></div>`}
 async function act(id,title,amt,st){if(st==='VOID')return;const ch=prompt('แก้ไขจำนวนเงิน (เว้นว่าง = ไม่แก้)\nพิมพ์ DELETE เพื่อยกเลิกรายการนี้',amt);if(ch===null||ch===''||ch===amt)return;
  try{if(ch==='DELETE'){if(!confirm('ยืนยันยกเลิกรายการ “'+title+'” ? ยอดบัญชีจะถูกคำนวณใหม่'))return;await api('/api/transactions/'+id,'DELETE');}else await api('/api/transactions/'+id,'PUT',{amount:ch,title});toast('สำเร็จ');render()}catch(e){toast(e.message)}}
 const loc=()=>{const d=new Date();d.setMinutes(d.getMinutes()-d.getTimezoneOffset());return d.toISOString().slice(0,16)};
@@ -79,7 +92,7 @@ $('ty').onchange=sync;$('cx').onclick=()=>$('dlg').close();
 $('add').onclick=()=>{if(!accts.length){toast('กรุณาเพิ่มบัญชีก่อน');view='accts';render();return}sync();$('dt').value=loc();$('f').dataset.key=crypto.randomUUID();$('dlg').showModal()};
 $('f').onsubmit=async e=>{e.preventDefault();if(busy)return;busy=true;$('sv').disabled=true;const t=$('ty').value;
  const b={type:t,title:$('ti').value,amount:$('am').value.replace(/,/g,''),occurredAt:new Date($('dt').value).toISOString(),idempotencyKey:$('f').dataset.key};
- if(t!=='INCOME')b.fromAccountId=$('fa').value;if(t!=='EXPENSE')b.toAccountId=$('ta').value;
+ if($('ct').value)b.category=$('ct').value;if($('nt').value)b.note=$('nt').value;if(t!=='INCOME')b.fromAccountId=$('fa').value;if(t!=='EXPENSE')b.toAccountId=$('ta').value;
  try{await api('/api/transactions','POST',b);$('dlg').close();$('f').reset();toast('บันทึกลงฐานข้อมูลแล้ว');render()}catch(er){toast(er.message)}finally{busy=false;$('sv').disabled=false}};
 document.querySelectorAll('nav button').forEach(b=>b.onclick=()=>{view=b.dataset.v;render()});
 addEventListener('online',()=>$('off').style.display='none');addEventListener('offline',()=>$('off').style.display='block');

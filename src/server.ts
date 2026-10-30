@@ -223,7 +223,8 @@ app.get('/api/summary',auth,wrap(async(q,r)=>{
     if(t.type==='EXPENSE'){exp=exp.plus(a);d.expense=d.expense.plus(a);const c=t.category||'ไม่ระบุหมวด';cat.set(c,(cat.get(c)||new Decimal(0)).plus(a));}
     else{inc=inc.plus(a);d.income=d.income.plus(a);} day.set(k,d);}
   const categories=[...cat].map(([name,v])=>({name,amount:v.toFixed(2),percent:exp.gt(0)?v.div(exp).mul(100).toDecimalPlaces(1).toNumber():0})).sort((x,y)=>+y.amount-+x.amount);
-  r.json({income:inc.toFixed(2),expense:exp.toFixed(2),net:inc.minus(exp).toFixed(2),count:rows.length,
+  const recordedIncome=rows.filter(t=>t.type==='INCOME').reduce((v,t)=>v.plus(t.amount.toString()),new Decimal(0));
+  r.json({income:inc.toFixed(2),recordedIncome:recordedIncome.toFixed(2),expense:exp.toFixed(2),net:inc.minus(exp).toFixed(2),count:rows.length,
     byCategory:categories,byDay:[...day].map(([date,v])=>({date,income:v.income.toFixed(2),expense:v.expense.toFixed(2)})),
     accounts:accountReports,totalLiquidity:accountReports.reduce((v,a)=>v.plus(a.balance),new Decimal(0)).toFixed(2),
     transactions:allRows.slice(0,100).map(t=>({id:t.id,date:dk(t.occurredAt),title:t.title,type:t.type,amount:t.amount.toString(),category:t.category,note:t.note,

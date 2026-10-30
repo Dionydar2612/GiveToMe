@@ -353,8 +353,12 @@ async function vReports(){
   const now=new Date(),today=ymd(now);
   return{html:`${head('รายงานการเงิน')}
   <div class="card">
-    <label class="fld" style="margin:0"><span>ดูข้อมูลช่วง</span><select id="rp" class="ip"><option value="MONTH">เดือนนี้</option><option value="YEAR">ปีนี้</option><option value="WEEK">สัปดาห์นี้</option><option value="DAY">วันนี้</option></select></label>
-    <label class="fld" id="rdatewrap" hidden><span>เลือกวันที่</span><input id="rdate" class="ip" type="date" value="${today}"></label>
+    <label class="fld" style="margin:0"><span>รูปแบบรายงาน</span><select id="rp" class="ip"><option value="MONTH">รายเดือน</option><option value="YEAR">รายปี</option><option value="WEEK">รายสัปดาห์</option><option value="DAY">รายวัน</option><option value="CUSTOM">กำหนดช่วงเวลาเอง</option></select></label>
+    <label class="fld" id="rmonthwrap"><span>เลือกเดือน</span><input id="rmonth" class="ip" type="month" value="${today.slice(0,7)}"></label>
+    <label class="fld" id="ryearwrap" hidden><span>เลือกปี</span><select id="ryear" class="ip">${Array.from({length:31},(_,i)=>now.getFullYear()-i).map(y=>`<option value="${y}"${y===now.getFullYear()?' selected':''}>${y+543} (${y})</option>`).join('')}</select></label>
+    <label class="fld" id="rdatewrap" hidden><span>เลือกวันที่อ้างอิง</span><input id="rdate" class="ip" type="date" value="${today}"></label>
+    <div id="rcustomwrap" hidden style="display:grid;grid-template-columns:1fr 1fr;gap:10px"><label class="fld"><span>ตั้งแต่วันที่</span><input id="rfrom" class="ip" type="date" value="${today.slice(0,7)}-01"></label><label class="fld"><span>ถึงวันที่</span><input id="rto" class="ip" type="date" value="${today}"></label></div>
+    <button type="button" class="chip" id="rnow" style="margin-top:12px">กลับไปช่วงเวลาปัจจุบัน</button>
     <div class="g" style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:16px">
       <div><div class="lb">รายรับ</div><div class="v pos" id="ri">฿0.00</div></div>
       <div><div class="lb">รายจ่าย</div><div class="v late" id="re">฿0.00</div></div>
@@ -367,14 +371,54 @@ async function vReports(){
   <details class="card" style="margin-top:14px"><summary style="font-weight:700;cursor:pointer">ดูรายจ่ายสูงสุด 5 รายการ</summary><div id="rtop" style="margin-top:10px"><div class="mu small">กำลังโหลด…</div></div></details>
   <details class="card" style="margin-top:10px"><summary style="font-weight:700;cursor:pointer">ดูกราฟเงินเข้า–ออกตามเวลา</summary><div id="rchart" style="margin-top:10px"><div class="mu small">กำลังโหลด…</div></div></details>
   <details class="card" style="margin-top:10px"><summary style="font-weight:700;cursor:pointer">ดูรายการเดินบัญชีทั้งหมด</summary><div class="mu small" style="margin:6px 0 10px">เงินเข้า เงินออก และการโอนระหว่างบัญชี</div><div id="rledger"><div class="mu small">กำลังโหลด…</div></div></details>
+  <div class="sec"><b>เตรียมภาษีเงินได้บุคคลธรรมดา</b><span class="mu small">ประมาณการทั้งปี</span></div>
+  <div class="card" id="rtax">
+    <p class="mu small" style="margin-top:0">กรอกยอดรายได้ทั้งปีและยอดลดหย่อนที่คุณมี ระบบจะคำนวณภาษีคร่าว ๆ และยอดที่ควรเตรียมไว้ ข้อมูลส่วนนี้บันทึกไว้ในอุปกรณ์นี้เท่านั้น</p>
+    <label class="fld"><span>ปีภาษี (พ.ศ.)</span><input id="taxyear" class="ip" type="number" min="2560" max="2600" inputmode="numeric"></label>
+    <label class="fld"><span>เงินได้พึงประเมินทั้งปี (บาท)</span><input id="taxincome" class="ip" type="number" min="0" step="100" placeholder="เช่น 300000" inputmode="decimal"></label>
+    <button type="button" class="btn ghost" id="taxloadincome" style="min-height:40px;font-size:14px;margin-top:8px">ดึงยอดรายรับประเภท “รายรับ” จากรายการในแอป</button>
+    <p class="mu small" style="margin:6px 0 0">ยอดที่ดึงมาเป็นเพียงตัวช่วยตั้งต้น ไม่ได้ยืนยันว่าเป็นเงินได้ที่ต้องเสียภาษีทั้งหมด โปรดตรวจสอบและแก้ไขก่อนคำนวณ</p>
+    <label class="fld"><span>ค่าใช้จ่ายที่หักได้ (บาท)</span><input id="taxexpense" class="ip" type="number" min="0" step="100" placeholder="กรอกยอดค่าใช้จ่ายที่มีสิทธิหัก" inputmode="decimal"></label>
+    <button type="button" class="btn ghost" id="taxautoexpense" style="min-height:40px;font-size:14px;margin-top:8px">คำนวณค่าใช้จ่ายเงินเดือน 50% (สูงสุด 100,000 บาท)</button>
+    <label class="fld"><span>ค่าลดหย่อนรวมที่มีสิทธิ (บาท)</span><input id="taxallowance" class="ip" type="number" min="0" step="100" value="60000" inputmode="decimal"></label>
+    <label class="fld"><span>ภาษีหัก ณ ที่จ่ายแล้ว (บาท)</span><input id="taxwithheld" class="ip" type="number" min="0" step="100" value="0" inputmode="decimal"></label>
+    <div style="border-top:1px solid var(--ln);margin-top:16px;padding-top:14px">
+      <div class="pair"><div><div class="lb">เงินได้สุทธิหลังหัก</div><div class="v" id="taxbase">฿0.00</div></div><div><div class="lb">ภาษีประมาณการ</div><div class="v" id="taxamount">฿0.00</div></div></div>
+      <div style="margin-top:14px;padding:12px;border-radius:12px;background:var(--fl)"><div class="lb" id="taxdueLabel">ยอดภาษีที่ต้องเตรียมเพิ่ม</div><div class="v late" id="taxdue">฿0.00</div><div class="mu small" id="taxmonthly" style="margin-top:4px"></div></div>
+      <p class="mu small" id="taxnote" style="margin:12px 0 0">กรอกข้อมูลเพื่อดูประมาณการ</p>
+    </div>
+    <details style="margin-top:14px"><summary style="font-weight:600;cursor:pointer">เอกสารที่ควรเตรียม</summary><ul class="mu small" style="padding-left:20px;line-height:1.8"><li>หนังสือรับรองการหักภาษี ณ ที่จ่าย (50 ทวิ)</li><li>หลักฐานรายได้จากทุกแหล่ง</li><li>หลักฐานประกันสังคม กองทุนสำรองเลี้ยงชีพ และประกัน</li><li>หลักฐานกองทุน/เงินออมเพื่อการลดหย่อน และเงินบริจาค (ถ้ามีสิทธิ)</li><li>เอกสารคู่สมรส บุตร หรือบิดามารดา (ถ้าใช้สิทธิ)</li></ul></details>
+    <p class="mu small" style="margin-bottom:0">ประมาณการนี้ใช้วิธีภาษีเงินได้สุทธิแบบขั้นบันได และเหมาะเป็นจุดเริ่มต้นสำหรับผู้มีรายได้จากเงินเดือนเป็นหลัก หากมีรายได้ประเภทอื่น อาจต้องคำนวณวิธีภาษีเพิ่มเติมและใช้เกณฑ์หักค่าใช้จ่ายต่างกัน ตรวจสอบสิทธิและอัตราของปีภาษีก่อนยื่นจริงที่ <a href="https://www.rd.go.th/english/6045.html" target="_blank" rel="noopener">กรมสรรพากร</a></p>
+  </div>
   <a class="btn ghost" id="rexport" href="/api/export/transactions.csv" download>ดาวน์โหลดรายงาน CSV</a>
   <p class="mu small">หมายเหตุ: การโอนเงินระหว่างบัญชีไม่นับเป็นรายรับหรือรายจ่าย เพื่อไม่ให้ยอดซ้ำ</p>`,mount(){
     const $id=id=>document.getElementById(id),money=v=>'฿'+fmt(v),pct=v=>Math.max(0,Math.min(100,Number(v)||0));
-    function period(){const mode=$id('rp').value,d=new Date(($id('rdate').value||today)+'T12:00:00');let a,b;
-      if(mode==='YEAR'){a=new Date(d.getFullYear(),0,1);b=new Date(d.getFullYear()+1,0,1)}
-      else if(mode==='MONTH'){a=new Date(d.getFullYear(),d.getMonth(),1);b=new Date(d.getFullYear(),d.getMonth()+1,1)}
-      else if(mode==='WEEK'){const day=(d.getDay()+6)%7;a=new Date(d.getFullYear(),d.getMonth(),d.getDate()-day);b=new Date(a);b.setDate(a.getDate()+7)}
-      else{a=new Date(d.getFullYear(),d.getMonth(),d.getDate());b=new Date(a);b.setDate(a.getDate()+1)}return{a,b};}
+    function period(){const mode=$id('rp').value;let a,b;
+      if(mode==='YEAR'){const y=Number($id('ryear').value);a=new Date(y,0,1);b=new Date(y+1,0,1)}
+      else if(mode==='MONTH'){const v=$id('rmonth').value||today.slice(0,7),[y,m]=v.split('-').map(Number);a=new Date(y,m-1,1);b=new Date(y,m,1)}
+      else if(mode==='CUSTOM'){const from=$id('rfrom').value,to=$id('rto').value;if(!from||!to||from>to)throw new Error('กรุณาเลือกช่วงวันที่ให้ถูกต้อง');a=new Date(from+'T00:00:00');b=new Date(to+'T00:00:00');b.setDate(b.getDate()+1)}
+      else{const d=new Date(($id('rdate').value||today)+'T12:00:00');if(mode==='WEEK'){const day=(d.getDay()+6)%7;a=new Date(d.getFullYear(),d.getMonth(),d.getDate()-day);b=new Date(a);b.setDate(a.getDate()+7)}else{a=new Date(d.getFullYear(),d.getMonth(),d.getDate());b=new Date(a);b.setDate(a.getDate()+1)}}return{a,b};}
+    function syncPeriodControls(){const mode=$id('rp').value;$id('rmonthwrap').hidden=mode!=='MONTH';$id('ryearwrap').hidden=mode!=='YEAR';$id('rdatewrap').hidden=!['WEEK','DAY'].includes(mode);$id('rcustomwrap').hidden=mode!=='CUSTOM';}
+    const taxIds=['taxyear','taxincome','taxexpense','taxallowance','taxwithheld'];
+    const taxKey='givetome-tax-plan-v1';
+    let taxSaved={};try{taxSaved=JSON.parse(store.get(taxKey)||'{}')||{}}catch{}
+    const taxYear=$id('taxyear');taxYear.value=taxSaved.year||new Date().getFullYear()+543;
+    for(const id of taxIds.slice(1)){if(taxSaved[id]!==undefined)$id(id).value=taxSaved[id];}
+    function calcTax(){
+      const val=id=>Math.max(0,Number($id(id).value)||0),income=val('taxincome'),expense=val('taxexpense'),allowance=val('taxallowance'),withheld=val('taxwithheld');
+      const base=Math.max(0,income-expense-allowance),bands=[[150000,0],[300000,.05],[500000,.10],[750000,.15],[1000000,.20],[2000000,.25],[5000000,.30],[Infinity,.35]];
+      let previous=0,tax=0;for(const [limit,rate] of bands){const taxable=Math.max(0,Math.min(base,limit)-previous);tax+=taxable*rate;previous=limit;if(base<=limit)break;}
+      const due=Math.max(0,tax-withheld),refund=Math.max(0,withheld-tax),month=new Date().getMonth()+1,currentTaxYear=new Date().getFullYear()+543,selectedTaxYear=Number(taxYear.value),remaining=selectedTaxYear===currentTaxYear?13-month:selectedTaxYear>currentTaxYear?12:0;
+      $id('taxbase').textContent=money(base);$id('taxamount').textContent=money(tax);
+      $id('taxdueLabel').textContent=refund>0?'ภาษีที่อาจขอคืน':'ยอดภาษีที่ควรเตรียมเพิ่ม';$id('taxdue').textContent=money(refund||due);$id('taxdue').className='v '+(refund>0?'pos':'late');
+      $id('taxmonthly').textContent=due>0&&remaining>0?'หากทยอยเก็บจนถึงสิ้นปี: ประมาณ '+money(due/remaining)+' ต่อเดือน':due>0?'เป็นปีภาษีที่ผ่านมา ยอดนี้เป็นเพียงประมาณการก่อนตรวจเอกสาร':'หัก ณ ที่จ่ายครอบคลุมภาษีประมาณการแล้ว';
+      $id('taxnote').textContent=income>0?'คำนวณจากอัตราภาษีขั้นบันได โดยหักค่าใช้จ่าย ค่าลดหย่อน และภาษีหัก ณ ที่จ่ายที่กรอกไว้':'กรอกเงินได้ทั้งปีเพื่อเริ่มคำนวณ';
+      const saved={year:taxYear.value};for(const id of taxIds.slice(1))saved[id]=$id(id).value;store.set(taxKey,JSON.stringify(saved));
+    }
+    taxIds.forEach(id=>$id(id).addEventListener('input',calcTax));
+    $id('taxautoexpense').onclick=()=>{$id('taxexpense').value=Math.min((Number($id('taxincome').value)||0)*.5,100000).toFixed(2);calcTax()};
+    $id('taxloadincome').onclick=async()=>{try{const ce=Number(taxYear.value)-543;if(!Number.isInteger(ce)||ce<2000||ce>2200)throw new Error('กรุณาตรวจสอบปีภาษี');const a=new Date(ce,0,1),b=new Date(ce+1,0,1);const d=await api('/api/summary?from='+encodeURIComponent(a.toISOString())+'&to='+encodeURIComponent(new Date(b.getTime()-1).toISOString()));$id('taxincome').value=Number(d.recordedIncome||0).toFixed(2);calcTax();toast('นำยอดรายรับจากแอปมาใส่แล้ว กรุณาตรวจสอบอีกครั้ง') }catch(e){toast(e.message||'โหลดรายรับไม่สำเร็จ')}};
+    calcTax();
     async function fill(){try{const {a,b}=period(),from=a.toISOString(),to=new Date(b.getTime()-1).toISOString();
       const d=await api('/api/summary?from='+encodeURIComponent(from)+'&to='+encodeURIComponent(to));
       const income=C(d.income),expense=C(d.expense),net=C(d.net),savingRate=income>0?net/income*100:0,expenseRate=income>0?expense/income*100:0;
@@ -386,14 +430,16 @@ async function vReports(){
       const cats=d.byCategory||[];
       $id('rcat').innerHTML=cats.length?cats.map(x=>`<div style="margin:12px 0"><div class="pair"><div><b>${esc(x.name)}</b><div class="mu small">${x.percent.toFixed(1)}% ของรายจ่าย</div></div><b>${money(x.amount)}</b></div><span class="bar"><i style="width:${pct(x.percent)}%"></i></span></div>`).join(''):'<div class="mu small">ยังไม่มีรายจ่ายในช่วงนี้</div>';
       $id('rtop').innerHTML=d.top&&d.top.length?d.top.map((x,i)=>`<div class="pair" style="padding:8px 0;border-bottom:1px solid var(--ln)"><div><b>${i+1}. ${esc(x.title)}</b><div class="mu small">${esc(x.date)} · ${esc(x.category||'ไม่ระบุหมวด')}</div></div><b class="late">${money(x.amount)}</b></div>`).join(''):'<div class="mu small">ไม่มีรายจ่ายในช่วงนี้</div>';
-      const chartRows=$id('rp').value==='YEAR'?Object.values(d.byDay.reduce((m,x)=>{const k=x.date.slice(0,7),v=m[k]||(m[k]={date:k,income:0,expense:0});v.income+=C(x.income);v.expense+=C(x.expense);return m},{})):d.byDay;
+      const chartRows=['YEAR','MONTH'].includes($id('rp').value)?Object.values(d.byDay.reduce((m,x)=>{const k=$id('rp').value==='YEAR'?x.date.slice(0,7):x.date,v=m[k]||(m[k]={date:k,income:0,expense:0});v.income+=C(x.income);v.expense+=C(x.expense);return m},{})):d.byDay;
       const max=Math.max(1,...chartRows.flatMap(x=>[C(x.income),C(x.expense)]));
       $id('rchart').innerHTML=chartRows.length?`<div class="mu small">แถบสีเขียว = เงินเข้า · สีส้ม = เงินออก</div>`+chartRows.map(x=>`<div style="margin:12px 0"><div class="pair"><div class="small">${esc(x.date)}</div><div class="small">เข้า ${fmt(x.income)} · ออก ${fmt(x.expense)}</div></div><div style="height:7px;border-radius:5px;background:var(--fl);overflow:hidden;margin-top:5px"><i style="display:block;height:100%;width:${C(x.income)/max*100}%;background:var(--ac)"></i></div><div style="height:7px;border-radius:5px;background:var(--fl);overflow:hidden;margin-top:3px"><i style="display:block;height:100%;width:${C(x.expense)/max*100}%;background:var(--wn)"></i></div></div>`).join(''):'<div class="empty">ไม่มีรายการในช่วงเวลานี้</div>';
       const rows=d.transactions||[],label=t=>t.type==='INCOME'?'รายรับ':t.type==='EXPENSE'?'รายจ่าย':t.type==='TRANSFER'?'โอนเงิน':t.type==='REFUND'?'คืนเงิน':'ปรับยอด';
       $id('rledger').innerHTML=rows.length?rows.map(t=>{const out=t.type==='EXPENSE'||t.type==='TRANSFER'&&t.fromAccount,positive=['INCOME','REFUND'].includes(t.type),sign=positive?'+':out?'−':'',acc=t.type==='TRANSFER'?`${esc(t.fromAccount||'—')} → ${esc(t.toAccount||'—')}`:t.type==='EXPENSE'?`จาก ${esc(t.fromAccount||'—')}`:`ไป ${esc(t.toAccount||'—')}`;return `<div style="padding:10px 0;border-bottom:1px solid var(--ln)"><div class="pair"><div style="min-width:0"><b>${esc(t.title)}</b><div class="mu small">${esc(t.date)} · ${label(t)}${t.category?' · '+esc(t.category):''}</div><div class="mu small">${acc}</div></div><b class="${positive?'pos':out?'late':''}" style="white-space:nowrap">${sign}${money(t.amount)}</b></div></div>`}).join(''):'<div class="empty">ไม่มีรายการเดินบัญชีในช่วงนี้</div>';
       $id('rexport').href='/api/export/transactions.csv?from='+encodeURIComponent(from)+'&to='+encodeURIComponent(to);
     }catch(e){$id('rhealth').textContent=e.message;$id('rliquidity').textContent=e.message}}
-    $id('rp').onchange=()=>{$id('rdatewrap').hidden=$id('rp').value==='YEAR';fill()};$id('rdate').onchange=fill;fill();
+    $id('rp').onchange=()=>{syncPeriodControls();fill()};['rmonth','ryear','rdate','rfrom','rto'].forEach(id=>$id(id).onchange=fill);
+    $id('rnow').onclick=()=>{const n=new Date(),date=ymd(n);$id('rmonth').value=date.slice(0,7);$id('ryear').value=String(n.getFullYear());$id('rdate').value=date;$id('rfrom').value=date.slice(0,7)+'-01';$id('rto').value=date;syncPeriodControls();fill()};
+    syncPeriodControls();fill();
   }}}
 
 async function vAccts(){

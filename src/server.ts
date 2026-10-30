@@ -179,7 +179,9 @@ app.post('/api/bills/:id/pay',auth,needJson,wrap(async(q,r)=>{
   const userId=uid(q),id=z.string().uuid().parse(q.params.id);
   const b=z.object({occurrenceDate:dateOnly,amount:money.optional(),accountId:z.string().uuid().optional()}).parse(q.body);
   const bill=await prisma.recurringBill.findFirst({where:{id,userId}});if(!bill)return void r.status(404).json({error:'ไม่พบรายการ'});
-  const accountId=b.accountId??bill.accountId;if(!await ownsAccounts(userId,[accountId]))return void r.status(404).json({error:'ไม่พบบัญชี'});
+  const accountId=b.accountId??bill.accountId;
+  if(!accountId)return void r.status(400).json({error:'กรุณาเลือกบัญชีที่ต้องการหักเงินก่อนชำระบิล'});
+  if(!await ownsAccounts(userId,[accountId]))return void r.status(404).json({error:'ไม่พบบัญชี'});
   const d=new Date(b.occurrenceDate+'T00:00:00.000Z'),amount=b.amount??bill.amount.toString(),payId=crypto.randomUUID();
   try{await prisma.$transaction(async db=>{
     const t=await db.transaction.create({data:{userId,type:'EXPENSE',amount,title:bill.name,category:bill.category,fromAccountId:accountId,

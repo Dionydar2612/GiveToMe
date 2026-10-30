@@ -207,15 +207,27 @@ app.delete('/api/bills/:id/pay/:occurrenceDate',auth,wrap(async(q,r)=>{
 // สรุปวิเคราะห์ (นับเฉพาะรายรับ/รายจ่ายที่ POSTED, ไม่นับโอนระหว่างบัญชี)
 app.get('/api/summary',auth,wrap(async(q,r)=>{
   const f=z.object({from:z.string().datetime(),to:z.string().datetime()}).parse(q.query);
-  const rows=await prisma.transaction.findMany({where:{userId:uid(q),status:'POSTED',type:{in:['INCOME','EXPENSE','REFUND']},occurredAt:{gte:new Date(f.from),lte:new Date(f.to)}},orderBy:{occurredAt:'asc'}});
+  const userId=uid(q),range={gte:new Date(f.from),lte:new Date(f.to)};
+  const [rows,allRows,accs,allPosted]=await Promise.all([
+    prisma.transaction.findMany({where:{userId,status:'POSTED',type:{in:['INCOME','EXPENSE','REFUND']},occurredAt:range},orderBy:{occurredAt:'asc'}}),
+    prisma.transaction.findMany({where:{userId,status:'POSTED',occurredAt:range},orderBy:{occurredAt:'desc'}}),
+    prisma.account.findMany({where:{userId,active:true}}),
+    prisma.transaction.findMany({where:{userId,status:'POSTED'}})
+  ]);
+  const txs:Tx[]=allPosted.map(t=>({id:t.id,type:t.type.toLowerCase() as Tx['type'],amount:t.amount.toString(),from:t.fromAccountId??undefined,to:t.toAccountId??undefined,status:'posted'}));
+  const accountNames=new Map(accs.map(a=>[a.id,a.name]));
+  const accountReports=accs.map(a=>{const period=allRows.reduce((v,t)=>{const n=new Decimal(t.amount.toString());if(t.toAccountId===a.id)v.in=v.in.plus(n);if(t.fromAccountId===a.id)v.out=v.out.plus(n);return v;},{in:new Decimal(0),out:new Decimal(0)});return {id:a.id,name:a.name,kind:a.kind,balance:balance(a.id,a.opening.toString(),txs),periodIn:period.in.toFixed(2),periodOut:period.out.toFixed(2),periodNet:period.in.minus(period.out).toFixed(2)};});
   let inc=new Decimal(0),exp=new Decimal(0);const cat=new Map<string,Decimal>(),day=new Map<string,{income:Decimal;expense:Decimal}>();
   const dk=(d:Date)=>d.toLocaleDateString('en-CA',{timeZone:'Asia/Bangkok'});
   for(const t of rows){const a=new Decimal(t.amount.toString()),k=dk(t.occurredAt);const d=day.get(k)||{income:new Decimal(0),expense:new Decimal(0)};
     if(t.type==='EXPENSE'){exp=exp.plus(a);d.expense=d.expense.plus(a);const c=t.category||'ไม่ระบุหมวด';cat.set(c,(cat.get(c)||new Decimal(0)).plus(a));}
     else{inc=inc.plus(a);d.income=d.income.plus(a);} day.set(k,d);}
+  const categories=[...cat].map(([name,v])=>({name,amount:v.toFixed(2),percent:exp.gt(0)?v.div(exp).mul(100).toDecimalPlaces(1).toNumber():0})).sort((x,y)=>+y.amount-+x.amount);
   r.json({income:inc.toFixed(2),expense:exp.toFixed(2),net:inc.minus(exp).toFixed(2),count:rows.length,
-    byCategory:[...cat].map(([name,v])=>({name,amount:v.toFixed(2)})).sort((x,y)=>+y.amount-+x.amount),
-    byDay:[...day].map(([date,v])=>({date,income:v.income.toFixed(2),expense:v.expense.toFixed(2)})),
+    byCategory:categories,byDay:[...day].map(([date,v])=>({date,income:v.income.toFixed(2),expense:v.expense.toFixed(2)})),
+    accounts:accountReports,totalLiquidity:accountReports.reduce((v,a)=>v.plus(a.balance),new Decimal(0)).toFixed(2),
+    transactions:allRows.slice(0,100).map(t=>({id:t.id,date:dk(t.occurredAt),title:t.title,type:t.type,amount:t.amount.toString(),category:t.category,note:t.note,
+      fromAccount: t.fromAccountId?accountNames.get(t.fromAccountId)??'บัญชีที่ไม่พบ':null,toAccount:t.toAccountId?accountNames.get(t.toAccountId)??'บัญชีที่ไม่พบ':null,status:t.status})),
     top:rows.filter(t=>t.type==='EXPENSE').sort((x,y)=>+y.amount-+x.amount).slice(0,5).map(t=>({title:t.title,amount:t.amount.toString(),category:t.category,note:t.note,date:dk(t.occurredAt)}))});}));
 
 // Export CSV กัน formula injection

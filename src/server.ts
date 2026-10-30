@@ -122,58 +122,84 @@ app.delete('/api/transactions/:id',auth,wrap(async(q,r)=>{ // ยกเลิก
     await db.auditLog.create({data:{userId,entity:'transaction',entityId:id,oldValue:{status:'POSTED'},newValue:{status:'VOID'}}});return n;});
   out?r.json(out):r.status(404).json({error:'ไม่พบรายการ'});}));
 
-// ---------- รายจ่ายประจำเดือน (เช็คลิสต์) ----------
-// ติ๊กจ่าย = สร้างรายการรายจ่ายจริง + ตัดยอดบัญชี; เอาติ๊กออก = ยกเลิก (VOID) รายการนั้น
+// ---------- recurring bills: monthly / weekly, linked to a default funding account ----------
 const ym=z.string().regex(/^\d{4}-(0[1-9]|1[0-2])$/);
-const billIn=z.object({name:z.string().min(1).max(80),amount:money,dueDay:z.number().int().min(1).max(31),
-  accountId:z.string().uuid().nullable().optional(),category:z.string().max(60).nullable().optional()});
+const dateOnly=z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
+const billIn=z.object({name:z.string().min(1).max(80),amount:money,frequency:z.enum(['MONTHLY','WEEKLY']).default('MONTHLY'),
+  dueDay:z.number().int().min(1).max(31).default(1),weekday:z.number().int().min(0).max(6).nullable().optional(),
+  accountId:z.string().uuid(),category:z.string().max(60).nullable().optional()})
+  .refine(b=>b.frequency!=='WEEKLY'||b.weekday!==null&&b.weekday!==undefined,'เลือกวันที่หักรายสัปดาห์');
 const monthOf=(d:Date)=>d.toLocaleDateString('en-CA',{timeZone:'Asia/Bangkok'}).slice(0,7);
+const dateKey=(d:Date)=>d.toISOString().slice(0,10);
+const daysForBill=(bill:any,year:number,month:number)=>{
+  const last=new Date(Date.UTC(year,month,0)).getUTCDate(),out:string[]=[];
+  if(bill.frequency==='WEEKLY'){
+    for(let day=1;day<=last;day++){const d=new Date(Date.UTC(year,month-1,day));if(d.getUTCDay()===bill.weekday)out.push(dateKey(d));}
+  } else out.push(dateKey(new Date(Date.UTC(year,month-1,Math.min(bill.dueDay,last)))));
+  return out;
+};
 app.get('/api/bills',auth,wrap(async(q,r)=>{
-  const{month}=z.object({month:ym}).parse(q.query);const userId=uid(q);
-  const [bills,checks]=await Promise.all([prisma.recurringBill.findMany({where:{userId},orderBy:[{dueDay:'asc'},{createdAt:'asc'}]}),
-    prisma.billCheck.findMany({where:{userId,month}})]);
-  const done=new Map(checks.map(c=>[c.billId,c]));
-  const items=bills.filter(b=>done.has(b.id)||(b.active&&monthOf(b.createdAt)<=month)).map(b=>{const c=done.get(b.id);
-    return{id:b.id,name:b.name,planned:b.amount.toString(),amount:(c?c.amount:b.amount).toString(),dueDay:b.dueDay,accountId:c?.accountId??b.accountId,
-      category:b.category,paid:!!c,paidAt:c?.paidAt??null};});
+  const {month}=z.object({month:ym}).parse(q.query);const userId=uid(q),[year,mo]=month.split('-').map(Number);
+  const [bills,payments,legacy]=await Promise.all([
+    prisma.recurringBill.findMany({where:{userId},orderBy:[{dueDay:'asc'},{createdAt:'asc'}]}),
+    prisma.recurringBillPayment.findMany({where:{userId,dueDate:{gte:new Date(Date.UTC(year,mo-1,1)),lt:new Date(Date.UTC(year,mo,1))}}}),
+    prisma.billCheck.findMany({where:{userId,month}})
+  ]);
+  const paid=new Map(payments.map(x=>[dateKey(x.dueDate),x]));
+  const legacyByBill=new Map(legacy.map(x=>[x.billId,x]));
+  const items=bills.flatMap(b=>{
+    if(!b.active&& !payments.some(p=>p.billId===b.id) && !legacyByBill.has(b.id))return [];
+    if(monthOf(b.createdAt)>month)return [];
+    return daysForBill(b,year,mo).map(d=>{
+      const p=payments.find(x=>x.billId===b.id&&dateKey(x.dueDate)===d);
+      const old= b.frequency==='MONTHLY'?legacyByBill.get(b.id):undefined;
+      const isPaid=!!p||!!old;
+      return {id:b.id,occurrenceDate:d,name:b.name,planned:b.amount.toString(),amount:(p?.amount??old?.amount??b.amount).toString(),
+        dueDay:b.dueDay,frequency:b.frequency,weekday:b.weekday,accountId:p?.accountId??old?.accountId??b.accountId,category:b.category,
+        paid:isPaid,paidAt:p?.paidAt??old?.paidAt??null};
+    });
+  }).sort((a,b)=>a.occurrenceDate.localeCompare(b.occurrenceDate));
   const sum=(xs:typeof items)=>xs.reduce((s,i)=>s.plus(i.amount),new Decimal(0));
-  r.json({month,items,total:sum(items).toFixed(2),paid:sum(items.filter(i=>i.paid)).toFixed(2),remaining:sum(items.filter(i=>!i.paid)).toFixed(2)});}));
+  r.json({month,items,total:sum(items).toFixed(2),paid:sum(items.filter(i=>i.paid)).toFixed(2),remaining:sum(items.filter(i=>!i.paid)).toFixed(2)});
+}));
 app.post('/api/bills',auth,needJson,wrap(async(q,r)=>{
   const b=billIn.parse(q.body),userId=uid(q);
-  if(b.accountId&&!await ownsAccounts(userId,[b.accountId]))return void r.status(404).json({error:'ไม่พบบัญชี'});
-  r.status(201).json(await prisma.recurringBill.create({data:{...b,userId}}));}));
+  if(!await ownsAccounts(userId,[b.accountId]))return void r.status(404).json({error:'ไม่พบบัญชี'});
+  r.status(201).json(await prisma.recurringBill.create({data:{...b,userId,weekday:b.frequency==='WEEKLY'?b.weekday:null}}));}));
 app.put('/api/bills/:id',auth,needJson,wrap(async(q,r)=>{
   const b=billIn.parse(q.body),userId=uid(q),id=z.string().uuid().parse(q.params.id);
-  if(b.accountId&&!await ownsAccounts(userId,[b.accountId]))return void r.status(404).json({error:'ไม่พบบัญชี'});
-  const n=await prisma.recurringBill.updateMany({where:{id,userId},data:b});
+  if(!await ownsAccounts(userId,[b.accountId]))return void r.status(404).json({error:'ไม่พบบัญชี'});
+  const n=await prisma.recurringBill.updateMany({where:{id,userId},data:{...b,weekday:b.frequency==='WEEKLY'?b.weekday:null}});
   n.count?r.json({ok:true}):r.status(404).json({error:'ไม่พบรายการ'});}));
-app.delete('/api/bills/:id',auth,wrap(async(q,r)=>{ // เลิกใช้ (เก็บประวัติเดือนที่จ่ายแล้วไว้)
+app.delete('/api/bills/:id',auth,wrap(async(q,r)=>{
   const userId=uid(q),id=z.string().uuid().parse(q.params.id);
   const n=await prisma.recurringBill.updateMany({where:{id,userId},data:{active:false}});
   n.count?r.json({ok:true}):r.status(404).json({error:'ไม่พบรายการ'});}));
 app.post('/api/bills/:id/pay',auth,needJson,wrap(async(q,r)=>{
   const userId=uid(q),id=z.string().uuid().parse(q.params.id);
-  const b=z.object({month:ym,amount:money.optional(),accountId:z.string().uuid().optional()}).parse(q.body);
+  const b=z.object({occurrenceDate:dateOnly,amount:money.optional(),accountId:z.string().uuid().optional()}).parse(q.body);
   const bill=await prisma.recurringBill.findFirst({where:{id,userId}});if(!bill)return void r.status(404).json({error:'ไม่พบรายการ'});
-  const accountId=b.accountId??bill.accountId;if(!accountId)return void r.status(400).json({error:'เลือกบัญชีที่ใช้จ่ายก่อน'});
-  if(!await ownsAccounts(userId,[accountId]))return void r.status(404).json({error:'ไม่พบบัญชี'});
-  const amount=b.amount??bill.amount.toString(),checkId=crypto.randomUUID();
+  const accountId=b.accountId??bill.accountId;if(!await ownsAccounts(userId,[accountId]))return void r.status(404).json({error:'ไม่พบบัญชี'});
+  const d=new Date(b.occurrenceDate+'T00:00:00.000Z'),amount=b.amount??bill.amount.toString(),payId=crypto.randomUUID();
   try{await prisma.$transaction(async db=>{
     const t=await db.transaction.create({data:{userId,type:'EXPENSE',amount,title:bill.name,category:bill.category,fromAccountId:accountId,
-      occurredAt:new Date(),idempotencyKey:'bill:'+checkId,billOccurrenceId:checkId,note:'รายจ่ายประจำเดือน '+b.month}});
-    await db.billCheck.create({data:{id:checkId,userId,billId:id,month:b.month,amount,accountId,transactionId:t.id}});
-    await db.auditLog.create({data:{userId,entity:'transaction',entityId:t.id,newValue:t as unknown as Prisma.InputJsonValue}});});
-    r.status(201).json({ok:true});}
-  catch(e){if(e instanceof Prisma.PrismaClientKnownRequestError&&e.code==='P2002')return void r.json({ok:true,already:true}); // กดซ้ำ ไม่สร้างซ้ำ
-    throw e;}}));
-app.delete('/api/bills/:id/pay/:month',auth,wrap(async(q,r)=>{
-  const userId=uid(q),id=z.string().uuid().parse(q.params.id),month=ym.parse(q.params.month);
-  const c=await prisma.billCheck.findFirst({where:{billId:id,month,userId}});if(!c)return void r.status(404).json({error:'ยังไม่ได้ติ๊กจ่าย'});
-  await prisma.$transaction(async db=>{
-    const old=c.transactionId?await db.transaction.findFirst({where:{id:c.transactionId,userId,status:'POSTED'}}):null;
-    if(old){await db.transaction.update({where:{id:old.id},data:{status:'VOID'}});
-      await db.auditLog.create({data:{userId,entity:'transaction',entityId:old.id,oldValue:{status:'POSTED'},newValue:{status:'VOID'}}});}
-    await db.billCheck.delete({where:{id:c.id}});});
+      occurredAt:new Date(),idempotencyKey:'recurring:'+payId,billOccurrenceId:payId,note:'บิลประจำ '+b.occurrenceDate}});
+    await db.recurringBillPayment.create({data:{id:payId,userId,billId:id,dueDate:d,amount,accountId,transactionId:t.id}});
+    await db.auditLog.create({data:{userId,entity:'transaction',entityId:t.id,newValue:t as unknown as Prisma.InputJsonValue}});
+  });r.status(201).json({ok:true});}
+  catch(e){if(e instanceof Prisma.PrismaClientKnownRequestError&&e.code==='P2002')return void r.json({ok:true,already:true});throw e;}
+}));
+app.delete('/api/bills/:id/pay/:occurrenceDate',auth,wrap(async(q,r)=>{
+  const userId=uid(q),id=z.string().uuid().parse(q.params.id),d=dateOnly.parse(q.params.occurrenceDate);
+  const c=await prisma.recurringBillPayment.findFirst({where:{billId:id,userId,dueDate:new Date(d+'T00:00:00.000Z')}});
+  if(c){await prisma.$transaction(async db=>{
+    if(c.transactionId)await db.transaction.updateMany({where:{id:c.transactionId,userId,status:'POSTED'},data:{status:'VOID'}});
+    await db.recurringBillPayment.delete({where:{id:c.id}});
+  });return void r.json({ok:true});}
+  // Backward-compatible undo for legacy monthly checks.
+  const month=d.slice(0,7),old=await prisma.billCheck.findFirst({where:{billId:id,userId,month}});
+  if(!old)return void r.status(404).json({error:'ยังไม่ได้จ่ายรายการนี้'});
+  await prisma.$transaction(async db=>{if(old.transactionId)await db.transaction.updateMany({where:{id:old.transactionId,userId,status:'POSTED'},data:{status:'VOID'}});await db.billCheck.delete({where:{id:old.id}});});
   r.json({ok:true});}));
 
 // สรุปวิเคราะห์ (นับเฉพาะรายรับ/รายจ่ายที่ POSTED, ไม่นับโอนระหว่างบัญชี)
@@ -193,7 +219,8 @@ app.get('/api/summary',auth,wrap(async(q,r)=>{
 // Export CSV กัน formula injection
 const csvCell=(v:unknown)=>{let s=String(v??'');if(/^[=+\-@\t\r]/.test(s))s="'"+s;return '"'+s.replace(/"/g,'""')+'"';};
 app.get('/api/export/transactions.csv',auth,wrap(async(q,r)=>{
-  const rows=await prisma.transaction.findMany({where:{userId:uid(q)},orderBy:{occurredAt:'desc'}});
+  const f=z.object({from:z.string().datetime().optional(),to:z.string().datetime().optional()}).parse(q.query);
+  const rows=await prisma.transaction.findMany({where:{userId:uid(q),occurredAt:{gte:f.from?new Date(f.from):undefined,lte:f.to?new Date(f.to):undefined}},orderBy:{occurredAt:'desc'}});
   r.type('text/csv; charset=utf-8').send('\ufeff'+['วันที่,ประเภท,ชื่อรายการ,จำนวน,สถานะ,หมวดหมู่,หมายเหตุ',...rows.map(t=>[t.occurredAt.toISOString(),t.type,t.title,t.amount,t.status,t.category,t.note].map(csvCell).join(','))].join('\n'));}));
 
 const web=path.resolve('public');if(fs.existsSync(web)){app.use(express.static(web));app.get('*',(_q,r)=>r.sendFile(path.join(web,'index.html')));}

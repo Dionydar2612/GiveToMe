@@ -90,11 +90,14 @@ model RecurringBill {
   name      String
   amount    Decimal     @db.Decimal(14, 2)
   dueDay    Int         @default(1)
+  frequency String      @default("MONTHLY")
+  weekday   Int?
   accountId String?
   category  String?
   active    Boolean     @default(true)
   createdAt DateTime    @default(now())
   checks    BillCheck[]
+  payments  RecurringBillPayment[]
 
   @@index([userId])
 }
@@ -151,4 +154,21 @@ model AuditLog {
   oldValue  Json?
   newValue  Json?
   createdAt DateTime @default(now())
+}
+
+
+// New schedule occurrence ledger. Keeps legacy BillCheck rows untouched.
+model RecurringBillPayment {
+  id            String        @id @default(uuid())
+  userId        String
+  billId        String
+  dueDate       DateTime      @db.Date
+  amount        Decimal       @db.Decimal(14, 2)
+  accountId     String
+  transactionId String?       @unique
+  paidAt        DateTime      @default(now())
+  bill          RecurringBill @relation(fields: [billId], references: [id], onDelete: Restrict)
+
+  @@unique([billId, dueDate])
+  @@index([userId, dueDate])
 }

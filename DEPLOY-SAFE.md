@@ -31,3 +31,29 @@ npm run build
 ```
 
 For local startup, set `DATABASE_URL` to a disposable/test database first, then run `npm start`. The additive SQL is safe to run repeatedly.
+
+## Recurring schedule + reports update
+
+This version adds an additive-only SQL migration:
+`prisma/migrations/20261030_recurring_schedule_reports.sql`.
+It adds `frequency` and `weekday` to `RecurringBill` and creates
+`RecurringBillPayment` for individual scheduled occurrences. It does not drop,
+rename, truncate, or rewrite legacy tables or rows. Existing `BillCheck` records
+remain readable as legacy monthly payments.
+
+Before deploying:
+1. Take a Supabase backup / export.
+2. Keep the existing `DATABASE_URL` and `SESSION_SECRET` values in Render.
+3. Deploy the complete repository. `npm start` runs both additive SQL files
+   with `CREATE TABLE/INDEX IF NOT EXISTS` and `ADD COLUMN IF NOT EXISTS`.
+4. Verify `/health`, sign in with an existing account, inspect balances and
+   historical transactions, then test one new monthly and one weekly bill.
+
+Recurring bill payments are NOT automatically withdrawn by a background job.
+The app creates the expense and reduces the selected account balance only when
+the user confirms “จ่ายแล้ว”. The selected account is the default funding
+account and can be changed for an individual payment.
+
+Reports support year, month, week (Monday-Sunday), and day ranges. CSV export
+uses the currently selected report range. Transfers are excluded from income /
+expense totals to avoid double counting.

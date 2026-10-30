@@ -1,11 +1,11 @@
 {
   "name": "givetome",
-  "version": "0.1.1",
+  "version": "0.2.0",
   "type": "module",
   "scripts": {
     "test": "vitest run",
     "build": "prisma generate && tsc",
-    "db:prepare": "prisma db execute --schema prisma/schema.prisma --file prisma/migrations/20261030_safe_add_recurring_bills/migration.sql",
+    "db:prepare": "prisma db execute --schema prisma/schema.prisma --file prisma/migrations/20261030_safe_add_recurring_bills/migration.sql && prisma db execute --schema prisma/schema.prisma --file prisma/migrations/20261030_recurring_schedule_reports.sql",
     "start": "npm run db:prepare && node dist/server.js"
   },
   "dependencies": {

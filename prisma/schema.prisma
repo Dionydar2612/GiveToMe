@@ -74,14 +74,45 @@ model Transaction {
 }
 
 model BillOccurrence {
-  id         String   @id @default(uuid())
-  userId     String
-  name       String
-  amount     Decimal  @db.Decimal(14, 2)
-  dueDate    DateTime
-  templateId String?
+  id      String   @id @default(uuid())
+  userId  String
+  name    String
+  amount  Decimal  @db.Decimal(14, 2)
+  dueDate DateTime
 
   @@unique([userId, name, dueDate])
+}
+
+// รายจ่ายประจำเดือน (แม่แบบ) — ติ๊กจ่ายแต่ละเดือนจะสร้างรายการรายจ่ายจริงและตัดยอดบัญชี
+model RecurringBill {
+  id        String      @id @default(uuid())
+  userId    String
+  name      String
+  amount    Decimal     @db.Decimal(14, 2)
+  dueDay    Int         @default(1)
+  accountId String?
+  category  String?
+  active    Boolean     @default(true)
+  createdAt DateTime    @default(now())
+  checks    BillCheck[]
+
+  @@index([userId])
+}
+
+// การติ๊กจ่ายของแต่ละเดือน (month = "YYYY-MM")
+model BillCheck {
+  id            String        @id @default(uuid())
+  userId        String
+  billId        String
+  month         String
+  amount        Decimal       @db.Decimal(14, 2)
+  accountId     String?
+  transactionId String?
+  paidAt        DateTime      @default(now())
+  bill          RecurringBill @relation(fields: [billId], references: [id], onDelete: Cascade)
+
+  @@unique([billId, month])
+  @@index([userId, month])
 }
 
 model SalaryPayment {
@@ -110,35 +141,6 @@ model SavingsGoal {
   name      String
   target    Decimal @db.Decimal(14, 2)
   accountId String?
-
-  @@index([userId])
-}
-
-// บิลประจำ: ระบบสร้างรายการ BillOccurrence ของแต่ละเดือนให้อัตโนมัติ
-model BillTemplate {
-  id        String   @id @default(uuid())
-  userId    String
-  name      String
-  amount    Decimal  @db.Decimal(14, 2)
-  dayOfMonth Int
-  category  String?
-  accountId String?
-  active    Boolean  @default(true)
-  createdAt DateTime @default(now())
-
-  @@index([userId])
-}
-
-// ตั้งเงินเดือนอัตโนมัติ: 1 คน 1 การตั้งค่า, startsAt = เริ่มนับรอบถัดไปหลังจากบันทึก
-model SalarySetting {
-  id        String   @id @default(uuid())
-  userId    String   @unique
-  amount    Decimal  @db.Decimal(14, 2)
-  payDay    Int
-  accountId String
-  title     String   @default("เงินเดือน")
-  active    Boolean  @default(true)
-  startsAt  DateTime @default(now())
 }
 
 model AuditLog {

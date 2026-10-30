@@ -23,43 +23,20 @@ export function payBill(b:Bill,pay:string,key:string):Bill&{status:'unpaid'|'par
   return{amount:b.amount,paid:p.toFixed(2),keys:[...b.keys,key],status:st(p),created:true};
 }
 
-// ---------- วันที่ (โซนเวลาไทย UTC+7) ----------
-const TZ_MS=7*36e5;
-/** วันที่ y-m-d เวลา 00:00 ตามเวลาไทย (m เริ่มที่ 0) */
-export const bkk=(y:number,m:number,d:number)=>new Date(Date.UTC(y,m,d)-TZ_MS);
-const parts=(d:Date)=>{const s=new Date(d.getTime()+TZ_MS);return{y:s.getUTCFullYear(),m:s.getUTCMonth(),d:s.getUTCDate()};};
-export const daysIn=(y:number,m:number)=>new Date(Date.UTC(y,m+1,0)).getUTCDate();
-/** "2026-10" ของเวลาไทย */
-export const monthKey=(d:Date)=>{const p=parts(d);return p.y+'-'+String(p.m+1).padStart(2,'0');};
-export function monthRange(key:string):{start:Date;end:Date}{
-  const[y,m]=key.split('-').map(Number);return{start:bkk(y,m-1,1),end:bkk(y,m,1)};}
-/** วันครบกำหนดของเดือน (วันที่เกินวันสุดท้ายของเดือน จะใช้วันสุดท้าย) */
-export function dueDateIn(key:string,day:number):Date{
-  const[y,m]=key.split('-').map(Number);return bkk(y,m-1,Math.min(day,daysIn(y,m-1)));}
-
-// ---------- เงินเดือนอัตโนมัติ ----------
-/** วันเงินเดือนที่ถึงกำหนดแล้ว: หลัง startsAt และไม่เกิน now (ไม่ย้อนหลังเกิน 24 เดือน) */
-export function duePayDates(startsAt:Date,now:Date,payDay:number):Date[]{
-  const s=parts(startsAt),out:Date[]=[];
-  for(let i=0;i<24;i++){const y=s.y+Math.floor((s.m+i)/12),m=(s.m+i)%12;
-    const d=bkk(y,m,Math.min(payDay,daysIn(y,m)));
-    if(d>now)break; if(d>startsAt)out.push(d);}
-  return out;}
-/** รอบเงินเดือนปัจจุบัน [start,end) — ถ้าไม่ตั้งเงินเดือนใช้เดือนปฏิทิน */
-export function cycleBounds(now:Date,payDay?:number|null):{start:Date;end:Date}{
-  const p=parts(now);
-  if(!payDay)return{start:bkk(p.y,p.m,1),end:bkk(p.y,p.m+1,1)};
-  const at=(y:number,m:number)=>{const yy=y+Math.floor(m/12),mm=((m%12)+12)%12;return bkk(yy,mm,Math.min(payDay,daysIn(yy,mm)));};
-  const thisM=at(p.y,p.m);
-  return now>=thisM?{start:thisM,end:at(p.y,p.m+1)}:{start:at(p.y,p.m-1),end:thisM};}
-
-// ---------- บิลประจำเดือน / งบ / เป้าหมาย ----------
-export type BillState='unpaid'|'partial'|'paid';
-export function billStatus(amount:string,paid:string):BillState{
-  const p=new Decimal(paid);return p.gte(amount)&&new Decimal(amount).gt(0)?'paid':p.gt(0)?'partial':'unpaid';}
-export function budgetStatus(amount:string,spent:string){
-  const a=new Decimal(amount),s=new Decimal(spent);
-  return{remaining:a.minus(s).toFixed(2),pct:a.gt(0)?Math.round(s.div(a).times(100).toNumber()):0,state:s.gt(a)?'over' as const:s.gte(a.times(0.8))?'near' as const:'ok' as const};}
-export function goalProgress(target:string,saved:string){
-  const t=new Decimal(target),s=Decimal.max(new Decimal(saved),0);
-  return{pct:t.gt(0)?Math.min(100,Math.floor(s.div(t).times(100).toNumber())):0,left:Decimal.max(t.minus(s),0).toFixed(2)};}
+// รายการเดินบัญชีของบัญชีเดียว: คำนวณยอดคงเหลือหลังแต่ละรายการ (txs ต้องเรียงเก่า→ใหม่)
+// ช่วงเวลา from/to เป็น epoch ms; รายการ VOID แสดงได้แต่ไม่กระทบยอด
+export type StTx=Tx&{at:number};
+export function statement(acc:string,opening:string,txs:StTx[],from?:number,to?:number){
+  let run=new Decimal(opening),start=new Decimal(opening),inn=new Decimal(0),out=new Decimal(0);
+  const rows:{id:string;signed:string;running:string|null}[]=[];
+  for(const t of txs){
+    const a=new Decimal(t.amount),signed=t.to===acc?a:a.neg(),posted=t.status==='posted';
+    if(posted)run=run.plus(signed);
+    if(from!==undefined&&t.at<from){if(posted)start=run;continue;}
+    if(to!==undefined&&t.at>to)continue;
+    if(posted){if(signed.gt(0))inn=inn.plus(a);else out=out.plus(a);}
+    rows.push({id:t.id,signed:signed.toFixed(2),running:posted?run.toFixed(2):null});
+  }
+  // run หลังลูป = ยอดปัจจุบันของบัญชี; end = ยอดสิ้นสุดช่วง
+  return{start:start.toFixed(2),end:start.plus(inn).minus(out).toFixed(2),in:inn.toFixed(2),out:out.toFixed(2),balance:run.toFixed(2),rows:rows.reverse()};
+}

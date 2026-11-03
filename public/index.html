@@ -56,6 +56,7 @@ a{color:inherit}
 .v{font-size:19px;font-weight:500;font-variant-numeric:tabular-nums;white-space:nowrap}
 .bar{display:block;height:6px;border-radius:3px;background:var(--fl);overflow:hidden;margin-top:12px}
 .bar i{display:block;height:100%;background:var(--ac);border-radius:3px;transition:width .4s ease}
+.bar i.wn{background:var(--wn)}
 .sec{display:flex;justify-content:space-between;align-items:baseline;padding:14px 0 2px}
 .sec b{font-weight:600;font-size:16px}
 .sec a,.lnk{color:var(--ac);font-size:14px;text-decoration:none;background:none;border:0;padding:6px 0}
@@ -99,6 +100,11 @@ button.r,.rb{cursor:pointer}
 .btn.warn.armed{background:var(--wn);color:#fff}
 .btn:disabled{opacity:.55}
 .btn+.btn{margin-top:10px}
+.btn.sm{min-height:40px;font-size:14px;border-radius:12px}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px}.row2 .btn{margin:0}
+button.card{width:100%;text-align:left;font:inherit;color:inherit}
+.chk{display:flex;align-items:center;gap:10px;margin-top:16px;font-size:14px}.chk input{width:20px;height:20px;accent-color:var(--ac);flex:none}
+.pv{margin-top:14px;padding:12px 14px;border-radius:14px;background:var(--acs)}.pv .v{font-size:22px}
 .ip{display:block;width:100%;min-height:48px;padding:0 14px;border:0;border-radius:12px;background:var(--fl);font-size:16px;margin-top:12px;appearance:none;-webkit-appearance:none}
 .ip:disabled{opacity:.6}
 select.ip{margin-top:0;background-image:linear-gradient(45deg,transparent 50%,var(--mu) 50%),linear-gradient(135deg,var(--mu) 50%,transparent 50%);background-position:calc(100% - 20px) 50%,calc(100% - 15px) 50%;background-size:5px 5px;background-repeat:no-repeat;padding-right:36px}
@@ -114,8 +120,8 @@ select.ip{margin-top:0;background-image:linear-gradient(45deg,transparent 50%,va
 
 /* ---------- nav ---------- */
 .nv{position:fixed;left:0;right:0;bottom:0;z-index:5;background:color-mix(in srgb,var(--bg) 90%,transparent);-webkit-backdrop-filter:blur(16px);backdrop-filter:blur(16px);border-top:1px solid var(--ln);padding-bottom:env(safe-area-inset-bottom)}
-.nv div{max-width:560px;margin:0 auto;display:grid;grid-template-columns:repeat(6,1fr);align-items:center}
-.nv a{display:flex;flex-direction:column;align-items:center;gap:1px;padding:9px 0 7px;color:var(--mu);font-size:11.5px;text-decoration:none}
+.nv div{max-width:560px;margin:0 auto;display:grid;grid-template-columns:repeat(7,1fr);align-items:center}
+.nv a{display:flex;flex-direction:column;align-items:center;gap:1px;padding:9px 0 7px;color:var(--mu);font-size:11px;text-decoration:none;white-space:nowrap;min-width:0}
 .nv a.on{color:var(--ac);font-weight:500}
 #add{width:50px;height:50px;border-radius:50%;border:0;background:var(--ac);color:var(--onac);display:grid;place-items:center;justify-self:center;box-shadow:0 4px 14px color-mix(in srgb,var(--ac) 35%,transparent)}
 
@@ -198,7 +204,8 @@ const I={
   left:svg('<path d="m14.5 6-6 6 6 6"/>',20), right:svg('<path d="m9.5 6 6 6-6 6"/>',20),
   user:svg('<circle cx="12" cy="8.5" r="3.5"/><path d="M5 20c.8-3.6 3.6-5.5 7-5.5s6.2 1.9 7 5.5"/>',20),
   search:svg('<circle cx="11" cy="11" r="6.5"/><path d="m20 20-4-4"/>',18),
-  check:svg('<path d="m5.5 12.5 4.5 4.5 8.5-9.5"/>',16)
+  check:svg('<path d="m5.5 12.5 4.5 4.5 8.5-9.5"/>',16),
+  goal:svg('<circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="4.5"/><circle cx="12" cy="12" r=".8"/>')
 };
 const store={get:k=>{try{return localStorage.getItem(k)}catch{return null}},set:(k,v)=>{try{localStorage.setItem(k,v)}catch{}}};
 const uuid=()=>crypto.randomUUID?crypto.randomUUID():'k'+Date.now()+Math.random().toString(16).slice(2);
@@ -220,7 +227,7 @@ function dayLabel(d,yr){const t=new Date(),y=new Date();y.setDate(t.getDate()-1)
 function groups(txs){const m=new Map();for(const t of txs){const d=new Date(t.occurredAt),k=ymd(d);if(!m.has(k))m.set(k,{d,items:[]});m.get(k).items.push(t)}return[...m.values()]}
 
 /* ====================== state ====================== */
-const S={tab:'home',sub:null,sig:'',tok:0,email:'',reg:false,accts:[],tx:new Map(),bills:new Map(),
+const S={tab:'home',sub:null,sig:'',tok:0,email:'',reg:false,accts:[],tx:new Map(),bills:new Map(),limit:null,goals:new Map(),
   mList:cur(),mBills:cur(),mAcct:cur(),seg:'all',cat:'',q:'',showVoid:false};
 const an=id=>esc((S.accts.find(a=>a.id===id)||{}).name||'—');
 const reg=l=>l.forEach(t=>S.tx.set(t.id,t));
@@ -258,6 +265,21 @@ const cleanAmt=s=>String(s).replace(/[,\s฿]/g,'');
 const head=(t,sub='',back='')=>`<header class="top">${back?`<a class="ic flat" href="${back}" aria-label="กลับ">${I.left}</a>`:''}<div class="tt"><h1>${esc(t)}</h1>${sub?`<div class="sub">${esc(sub)}</div>`:''}</div><button class="ic" data-me aria-label="บัญชีผู้ใช้">${I.user}</button></header>`;
 const monthBar=(o,id)=>`<div class="mon"><button class="ic flat" data-m="${id}" data-d="-1" aria-label="เดือนก่อนหน้า">${I.left}</button><b>${mlabel(o)}</b><button class="ic flat" data-m="${id}" data-d="1" aria-label="เดือนถัดไป">${I.right}</button></div>`;
 
+const dl=k=>new Date(k+'T00:00:00').toLocaleDateString('th-TH',{day:'numeric',month:'short',year:'2-digit'});
+const lget=()=>api('/api/limit').then(l=>(S.limit=l)).catch(()=>null);
+function limitCard(l){
+  if(!l||!l.enabled)return `<button class="card" data-limit><b>ลิมิตใช้จ่ายรายวัน</b><p class="mu small">กำหนดวงเงินที่ใช้ได้ต่อวัน ไม่ว่าในบัญชีจะมีเงินเท่าไร ถ้าวันไหนใช้เกินจะถูกหักจากวันพรุ่งนี้</p><span class="pos small">ตั้งลิมิต</span></button>`;
+  const t=l.today,rem=C(t.remaining),allow=C(t.allowance),spent=C(t.spent),over=C(t.over),L=C(l.dailyLimit),car=C(t.carried);
+  const pct=allow>0?Math.min(100,Math.round(spent/allow*100)):(spent>0?100:0),deducted=Math.min(L,car),backlog=car-deducted;
+  return `<button class="card" data-limit>
+    <div class="lb">${over?'ใช้เกินวงเงินวันนี้':'วันนี้ใช้ได้อีก'}</div>
+    <div class="v ${over?'late':''}" style="font-size:30px">฿${fm(over?over:Math.max(0,rem))}</div>
+    <span class="bar"><i class="${over?'wn':''}" style="width:${pct}%"></i></span>
+    <p class="mu small" style="margin:10px 0 0">ใช้ไปแล้ว ฿${fm(spent)} จากวงเงินวันนี้ ฿${fm(allow)} <span class="mu">(ตั้งไว้วันละ ฿${fm(L)})</span></p>
+    ${car>0?`<p class="small late" style="margin:4px 0 0">หักยอดที่เกินมาจากวันก่อน −฿${fm(deducted)}${backlog>0?` · ยังค้างหักอีก ฿${fm(backlog)} ในวันถัดไป`:''}</p>`:''}
+    ${over?`<p class="small late" style="margin:4px 0 0">ส่วนที่เกินจะถูกหักจากวงเงินพรุ่งนี้ → พรุ่งนี้ใช้ได้ ฿${fmt(l.tomorrow.allowance)}</p>`:''}
+  </button>`}
+
 function row(t,o={}){
   const vd=t.status==='VOID',tr=t.type==='TRANSFER',inc=t.type==='INCOME'||t.type==='REFUND';
   let amt,cls='';
@@ -274,19 +296,24 @@ function row(t,o={}){
 /* ====================== views ====================== */
 async function vHome(){
   const mo=cur(),[a,b]=range(mo);
-  const [,bm,sum,recent]=await Promise.all([load(),api('/api/bills?month='+key(mo)),
-    api(`/api/summary?from=${iso(a)}&to=${iso(b)}`),api('/api/transactions?status=POSTED&limit=5')]);
+  const [,bm,sum,recent,lim,gl]=await Promise.all([load(),api('/api/bills?month='+key(mo)),
+    api(`/api/summary?from=${iso(a)}&to=${iso(b)}`),api('/api/transactions?status=POSTED&limit=5'),lget(),api('/api/goals').catch(()=>null)]);
   reg(recent);S.bills=new Map(bm.items.map(i=>[i.id,i]));
   const total=S.accts.reduce((s,x)=>s+C(x.balance),0),n=bm.items.length,done=bm.items.filter(i=>i.paid).length;
   const pct=C(bm.total)?Math.round(C(bm.paid)/C(bm.total)*100):0;
   const today=new Date().toLocaleDateString('th-TH',{weekday:'long',day:'numeric',month:'long'});
   const billCard=n?`<a class="card" href="#/bills"><div class="pair"><div><div class="lb">บิลประจำเดือนนี้</div><div class="v">${done}/${n} รายการ</div></div><div><div class="lb">${C(bm.remaining)?'ยังต้องจ่าย':'สถานะ'}</div><div class="v ${C(bm.remaining)?'':'pos'}">${C(bm.remaining)?'฿'+fmt(bm.remaining):'จ่ายครบแล้ว'}</div></div></div><span class="bar"><i style="width:${pct}%"></i></span></a>`
     :`<a class="card" href="#/bills"><b>บิลประจำ</b><p class="mu small">จัดการรายการหักเงินแบบรายเดือนและรายสัปดาห์</p><span class="pos small">ตั้งค่ารายการแรก</span></a>`;
+  const gActive=gl?gl.items.filter(g=>!g.done):[];
+  const goalCard=gl&&gl.items.length?`<a class="card" href="#/goals"><div class="pair"><div><div class="lb">เป้าหมายการออม</div><div class="v">${gl.items.length} รายการ</div></div><div><div class="lb">${gActive.length?'ต้องเก็บเดือนนี้':'สถานะ'}</div><div class="v ${gActive.length?'':'pos'}">${gActive.length?'฿'+fmt(gl.monthlyTotal):'ครบทุกเป้าหมาย'}</div></div></div></a>`
+    :`<a class="card" href="#/goals"><b>เป้าหมายการออม</b><p class="mu small">อยากซื้อของราคาเท่านี้ ต้องเก็บเดือนละเท่าไร ให้ระบบคำนวณให้</p><span class="pos small">ตั้งเป้าหมายแรก</span></a>`;
   return{html:`${head('ภาพรวม',today)}
   <div class="hero"><div class="lb">ยอดเงินรวมทุกบัญชี</div><div><span class="cur">฿</span>${big(fc(total))}</div></div>
+  ${limitCard(lim)}
   ${S.accts.length?'':`<div class="card"><b>เริ่มต้นใช้งาน</b><p class="mu small">เพิ่มบัญชีแรก เช่น เงินสดหรือบัญชีธนาคาร แล้วกด + เพื่อบันทึกรายรับรายจ่าย</p><button class="btn" data-newacct>เพิ่มบัญชี</button></div>`}
   <div class="card"><div class="pair"><div><div class="lb">รายรับเดือนนี้</div><div class="v pos">฿${fmt(sum.income)}</div></div><div><div class="lb">รายจ่ายเดือนนี้</div><div class="v">฿${fmt(sum.expense)}</div></div></div></div>
   ${billCard}
+  ${goalCard}
   <div class="sec"><b>รายการล่าสุด</b><a href="#/list">ดูทั้งหมด</a></div>
   ${recent.length?recent.map(t=>row(t)).join(''):`<div class="empty"><b>ยังไม่มีรายการ</b>กด + เพื่อบันทึกรายการแรก</div>`}`}}
 
@@ -442,6 +469,26 @@ async function vReports(){
     syncPeriodControls();fill();
   }}}
 
+async function vGoals(){
+  const [l,gl]=await Promise.all([lget(),api('/api/goals'),load()]).then(([a,b])=>[a,b]);
+  S.goals=new Map(gl.items.map(g=>[g.id,g]));
+  const recent=l&&l.enabled?l.recent.filter(d=>d.date!==l.today.date):[];
+  const gcard=g=>{const pend=!g.done;
+    return `<div class="card"><div class="pair" style="--c:1"><div><b>${esc(g.name)}</b><div class="mu small">เก็บแล้ว ฿${fmt(g.saved)} จาก ฿${fmt(g.target)}</div></div></div>
+    <span class="bar"><i style="width:${Math.max(g.pct>0?2:0,g.pct)}%"></i></span><div class="mu small" style="margin-top:6px">${g.pct.toFixed(1)}%</div>
+    ${g.done?`<div class="pv"><div class="v pos">🎉 เก็บครบแล้ว</div></div>`
+     :g.monthly===null?`<p class="mu small" style="margin:12px 0 0">เป้าหมายนี้ยังไม่มีวันครบกำหนด กด “แก้ไข” เพื่อให้ระบบคำนวณยอดที่ต้องเก็บ</p>`
+     :`<div class="pv"><div class="lb">${g.overdue?'เลยกำหนดแล้ว ต้องเก็บอีก':'ต้องเก็บเดือนละ'}</div><div class="v ${g.overdue?'late':''}">฿${fmt(g.monthly)}</div>
+       <div class="mu small" style="margin-top:4px">${g.overdue?`ครบกำหนด ${dl(g.deadline)} · เหลืออีก ฿${fmt(g.remaining)}`:`อีก ${g.monthsLeft} เดือน · ครบ ${dl(g.deadline)} · เหลืออีก ฿${fmt(g.remaining)}`}</div>
+       ${g.overdue?'':`<div class="mu small">หรือประมาณสัปดาห์ละ ฿${fmt(g.weekly)} · วันละ ฿${fmt(g.daily)}</div>`}</div>`}
+    <div class="row2"><button class="btn sm" data-gdep="${esc(g.id)}">ฝาก / ถอน</button><button class="btn sm ghost" data-gedit="${esc(g.id)}">แก้ไข</button></div></div>`};
+  return{html:`${head('เป้าหมาย','ลิมิตรายวัน และการเก็บเงิน')}
+  <div class="sec"><b>ลิมิตใช้จ่ายรายวัน</b></div>${limitCard(l)}
+  ${recent.length?`<details class="card"><summary style="font-weight:600;cursor:pointer">ย้อนหลัง ${recent.length} วัน</summary>${recent.map(d=>`<div class="pair" style="padding:9px 0;border-bottom:1px solid var(--ln);--c:2"><div><b>${dl(d.date)}</b><div class="mu small">วงเงินวันนั้น ฿${fmt(d.allowance)}</div></div><div style="text-align:right"><b class="${C(d.over)?'late':''}">ใช้ ฿${fmt(d.spent)}</b><div class="small ${C(d.over)?'late':'mu'}">${C(d.over)?'เกิน ฿'+fmt(d.over):'ไม่เกิน'}</div></div></div>`).join('')}</details>`:''}
+  <div class="sec"><b>เป้าหมายการออม</b>${gl.items.length?`<span class="mu small">ต้องเก็บเดือนละรวม ฿${fmt(gl.monthlyTotal)}</span>`:''}</div>
+  ${gl.items.length?gl.items.map(gcard).join('')+`<button class="btn ghost" data-newgoal style="margin-top:6px">เพิ่มเป้าหมาย</button>`
+   :`<div class="empty"><b>ยังไม่มีเป้าหมาย</b>บอกว่าอยากได้อะไร ราคาเท่าไร และอยากได้ภายในกี่เดือน ระบบจะบอกว่าต้องเก็บเดือนละเท่าไร<button class="btn" data-newgoal>ตั้งเป้าหมายแรก</button></div>`}`}}
+
 async function vAccts(){
   await load();
   const total=S.accts.reduce((s,x)=>s+C(x.balance),0);
@@ -473,6 +520,7 @@ async function openAdd(type='EXPENSE'){
   sheet(`<div class="grab"></div>
   <div class="seg" id="tys"><button data-t="EXPENSE">รายจ่าย</button><button data-t="INCOME">รายรับ</button><button data-t="TRANSFER">โอน</button></div>
   <div class="amtbox"><span>฿</span><input id="am" class="amt" inputmode="decimal" placeholder="0.00" autocomplete="off" aria-label="จำนวนเงิน"></div>
+  <p class="meta" id="lh" hidden></p>
   <input id="ti" class="ip" maxlength="120" autocomplete="off" aria-label="ชื่อรายการ">
   <div id="cw" style="margin-top:14px"></div>
   <label class="fld" id="fw"><span id="fl"></span><select id="fa" class="ip">${opts(def)}</select></label>
@@ -480,15 +528,23 @@ async function openAdd(type='EXPENSE'){
   <label class="fld"><span>วันที่และเวลา</span><input id="dt" type="datetime-local" class="ip" value="${loc()}"></label>
   <input id="nt" class="ip" placeholder="โน้ต (ไม่บังคับ) เช่น จ่ายที่ไหน จ่ายด้วยอะไร" maxlength="500" style="margin-top:14px" aria-label="โน้ต">
   ${errBox}<button class="btn" id="sv" style="margin-top:16px">บันทึก</button>`,()=>{
+    const lh=()=>{const el=$('lh'),L=S.limit;if(!el)return;
+      if(!L||!L.enabled||st.type!=='EXPENSE'||st.cat==='เงินออม'||($('dt').value||'').slice(0,10)!==ymd(new Date())){el.hidden=true;return}
+      const raw=cleanAmt($('am').value),a=moneyOk(raw)?C(raw):0,after=C(L.today.remaining)-a;
+      el.hidden=false;el.className='meta'+(after<0?' late':'');
+      el.textContent=after<0?`เกินวงเงินวันนี้ ฿${fm(-after)} · ส่วนที่เกินจะถูกหักจากพรุ่งนี้`:a?`หลังรายการนี้ วันนี้ใช้ได้อีก ฿${fm(after)}`:`วันนี้ใช้ได้อีก ฿${fm(after)}`};
+    $('am').addEventListener('input',lh);$('dt').addEventListener('change',lh);
+    lget().then(()=>lh());
     const paint=(reset)=>{const t=st.type;
       $('tys').querySelectorAll('button').forEach(b=>b.classList.toggle('on',b.dataset.t===t));
       $('ti').placeholder={EXPENSE:'จ่ายอะไร เช่น ข้าวมันไก่',INCOME:'รับจากอะไร เช่น เงินเดือน',TRANSFER:'เช่น เติมเงินวอลเล็ต'}[t];
       const list=t==='EXPENSE'?EXP:t==='INCOME'?INC:[];
       if(reset)st.cat='';
-      $('cw').innerHTML=list.length?chips(list,st.cat,'cc'):'';bindChips('cc',v=>{st.cat=v});
+      $('cw').innerHTML=list.length?chips(list,st.cat,'cc'):'';bindChips('cc',v=>{st.cat=v;lh()});
       $('fw').hidden=t==='INCOME';$('tw').hidden=t==='EXPENSE';
       $('fl').textContent=t==='TRANSFER'?'จากบัญชี':'จ่ายจากบัญชี';$('tl').textContent=t==='TRANSFER'?'ไปยังบัญชี':'เข้าบัญชี';
-      if(reset){if(t==='INCOME')$('ta').value=def;if(t==='TRANSFER'&&$('ta').value===$('fa').value)$('ta').value=other}};
+      if(reset){if(t==='INCOME')$('ta').value=def;if(t==='TRANSFER'&&$('ta').value===$('fa').value)$('ta').value=other}
+      lh()};
     $('tys').onclick=e=>{const b=e.target.closest('[data-t]');if(!b)return;st.type=b.dataset.t;paint(true)};
     paint(false);
     $('sv').onclick=()=>run($('sv'),async()=>{
@@ -500,7 +556,8 @@ async function openAdd(type='EXPENSE'){
       if(st.cat)b.category=st.cat;if($('nt').value.trim())b.note=$('nt').value.trim();
       if(t!=='INCOME')b.fromAccountId=from;if(t!=='EXPENSE')b.toAccountId=to;
       await api('/api/transactions','POST',b);store.set('acct',t==='INCOME'?to:from);
-      closeSheet();toast('บันทึกแล้ว');render()});
+      closeSheet();toast('บันทึกแล้ว');render();
+      if(t==='EXPENSE'&&S.limit&&S.limit.enabled)lget().then(l=>{if(l&&l.enabled&&C(l.today.over)>0)toast(`บันทึกแล้ว · เกินวงเงินวันนี้ ฿${fmt(l.today.over)} (หักจากพรุ่งนี้)`)})});
     setTimeout(()=>{try{$('am').focus()}catch{}},60)})}
 
 function openTx(id){
@@ -582,6 +639,69 @@ function openBill(i){
     else setTimeout(()=>{try{$('bn').focus()}catch{}},60)
   })}
 
+function openLimit(l){
+  l=l&&l.enabled?l:null;
+  sheet(`<div class="grab"></div><h2>ลิมิตใช้จ่ายรายวัน</h2>
+  <p class="mu small" style="margin:0">กำหนดวงเงินที่ใช้ได้ต่อวัน ไม่ว่าในบัญชีจะมีเงินเท่าไร ถ้าวันไหนใช้เกิน ส่วนที่เกินจะถูกหักจากวงเงินของวันถัดไป</p>
+  <div class="amtbox"><span>฿</span><input id="am" class="amt" inputmode="decimal" placeholder="100" value="${l?esc(String(Number(l.dailyLimit))):''}" autocomplete="off" aria-label="วงเงินต่อวัน"></div>
+  <div class="meta">บาทต่อวัน</div>
+  <label class="chk"><input type="checkbox" id="ib"${l&&l.includeBills?' checked':''}><span>นับบิลประจำเป็นรายจ่ายรายวันด้วย</span></label>
+  <p class="mu small" style="margin:10px 0 0">ปกติบิลประจำ เช่น ค่าเช่าห้อง จะไม่นับรวม · รายจ่ายหมวด “เงินออม” ไม่นับเช่นกัน · นับวันตามเวลาไทย · เมื่อเปลี่ยนวงเงินหรือเงื่อนไข ระบบจะเริ่มนับใหม่จากวันนี้</p>
+  ${errBox}<button class="btn" id="sv" style="margin-top:16px">${l?'บันทึก':'เปิดใช้ลิมิต'}</button>${l?'<button class="btn warn" id="off2">ปิดลิมิต</button>':''}`,()=>{
+    $('sv').onclick=()=>run($('sv'),async()=>{const v=cleanAmt($('am').value);
+      if(!moneyOk(v)||Number(v)<=0)throw Error('ใส่วงเงินต่อวันให้ถูกต้อง เช่น 100 หรือ 250');
+      S.limit=await api('/api/limit','PUT',{dailyLimit:v,includeBills:$('ib').checked});closeSheet();toast('บันทึกลิมิตแล้ว');render()});
+    if(l)arm($('off2'),async()=>{await api('/api/limit','DELETE');S.limit={enabled:false};closeSheet();toast('ปิดลิมิตแล้ว');render()});
+    else setTimeout(()=>{try{$('am').focus()}catch{}},60)})}
+
+function openGoal(g){
+  const edit=!!g;let mode='MONTHS',n=0;
+  sheet(`<div class="grab"></div><h2>${edit?'แก้ไขเป้าหมาย':'เป้าหมายการออมใหม่'}</h2>
+  <input id="gn" class="ip" placeholder="อยากได้อะไร เช่น หูฟัง, โน้ตบุ๊ก, เที่ยวญี่ปุ่น" maxlength="80" value="${edit?esc(g.name):''}" autocomplete="off" aria-label="ชื่อเป้าหมาย">
+  <label class="fld"><span>ราคา / จำนวนเงินที่ต้องการ (บาท)</span><input id="gt" class="ip" inputmode="decimal" placeholder="เช่น 3000" value="${edit?esc(String(Number(g.target))):''}" autocomplete="off"></label>
+  ${edit?'':`<label class="fld"><span>มีเงินเก็บไว้แล้วเท่าไร (บาท · ไม่บังคับ)</span><input id="gs" class="ip" inputmode="decimal" placeholder="0" autocomplete="off"></label>`}
+  <div class="seg" id="gm" style="margin-top:16px"><button type="button" data-m="MONTHS" class="on">ภายในกี่เดือน</button><button type="button" data-m="MONTHLY">เก็บเดือนละเท่าไร</button></div>
+  <label class="fld" id="gmw"><span>อยากได้ภายใน (เดือน)</span><input id="gmo" class="ip" inputmode="numeric" placeholder="เช่น 6" value="${edit&&g.monthsLeft?g.monthsLeft:''}" autocomplete="off"></label>
+  <label class="fld" id="gpw" hidden><span>เก็บได้เดือนละ (บาท)</span><input id="gp" class="ip" inputmode="decimal" placeholder="เช่น 500" autocomplete="off"></label>
+  <div class="pv" id="gv"><div class="mu small">ใส่ราคาและระยะเวลา เพื่อดูว่าต้องเก็บเดือนละเท่าไร</div></div>
+  ${edit?'<p class="mu small" style="margin:10px 0 0">การแก้ไขจะตั้งแผนใหม่นับจากวันนี้ และคงยอดที่เก็บไว้แล้วเดิม (ปรับยอดที่เก็บด้วยปุ่ม ฝาก / ถอน)</p>':''}
+  ${errBox}<button class="btn" id="sv" style="margin-top:16px">${edit?'บันทึก':'ตั้งเป้าหมาย'}</button>${edit?'<button class="btn warn" id="dl">เลิกเป้าหมายนี้</button>':''}`,()=>{
+    const read=()=>{const target=cleanAmt($('gt').value),saved=edit?String(g.saved):(cleanAmt($('gs').value)||'0');
+      const o={target,saved,mode};if(mode==='MONTHS')o.months=$('gmo').value.trim();else o.monthly=cleanAmt($('gp').value);return o};
+    const valid=o=>moneyOk(o.target)&&Number(o.target)>0&&moneyOk(o.saved)&&(mode==='MONTHS'?/^\d{1,3}$/.test(o.months)&&+o.months>=1&&+o.months<=600:moneyOk(o.monthly)&&Number(o.monthly)>0);
+    const preview=debounce(async()=>{const el=$('gv');if(!el||!$('gt'))return; // ปิดหน้าต่างไปแล้ว
+      const my=++n,o=read();
+      if(!valid(o)){el.innerHTML='<div class="mu small">ใส่ราคาและระยะเวลา เพื่อดูว่าต้องเก็บเดือนละเท่าไร</div>';return}
+      const p=new URLSearchParams({target:o.target,saved:o.saved,mode});if(mode==='MONTHS')p.set('months',o.months);else p.set('monthly',o.monthly);
+      try{const r=await api('/api/goals/plan?'+p);if(my!==n)return;
+        el.innerHTML=r.done?'<div class="v pos">🎉 มีเงินครบตามเป้าแล้ว</div>':`<div class="lb">ต้องเก็บเดือนละ</div><div class="v">฿${fmt(r.monthly)}</div><div class="mu small" style="margin-top:4px">ภายใน ${r.months} เดือน · ครบ ${dl(r.deadline)} · เหลืออีก ฿${fmt(r.remaining)}</div><div class="mu small">หรือประมาณสัปดาห์ละ ฿${fmt(r.weekly)} · วันละ ฿${fmt(r.daily)}</div>`}
+      catch(e){if(my===n)el.innerHTML=`<div class="mu small">${esc(e.message)}</div>`}},250);
+    ['gt','gs','gmo','gp'].forEach(id=>{const el=$(id);el&&el.addEventListener('input',preview)});
+    $('gm').onclick=e=>{const b=e.target.closest('[data-m]');if(!b)return;mode=b.dataset.m;
+      $('gm').querySelectorAll('button').forEach(x=>x.classList.toggle('on',x===b));$('gmw').hidden=mode!=='MONTHS';$('gpw').hidden=mode!=='MONTHLY';preview()};
+    if(edit)preview();
+    $('sv').onclick=()=>run($('sv'),async()=>{const name=$('gn').value.trim(),o=read();
+      if(!name)throw Error('ใส่ชื่อเป้าหมาย');
+      if(!moneyOk(o.target)||Number(o.target)<=0)throw Error('ใส่ราคาให้ถูกต้อง เช่น 3000');
+      if(!moneyOk(o.saved))throw Error('ยอดที่เก็บไว้แล้วต้องเป็นตัวเลขไม่ติดลบ');
+      if(!valid(o))throw Error(mode==='MONTHS'?'ใส่จำนวนเดือนเป็นเลขจำนวนเต็ม 1–600':'ใส่ยอดที่เก็บได้ต่อเดือนให้ถูกต้อง');
+      const b={name,target:o.target,mode};if(!edit)b.saved=o.saved;if(mode==='MONTHS')b.months=+o.months;else b.monthly=o.monthly;
+      await api(edit?'/api/goals/'+g.id:'/api/goals',edit?'PUT':'POST',b);closeSheet();toast(edit?'บันทึกแล้ว':'ตั้งเป้าหมายแล้ว');render()});
+    if(edit)arm($('dl'),async()=>{await api('/api/goals/'+g.id,'DELETE');closeSheet();toast('เลิกเป้าหมายแล้ว');render()});
+    else setTimeout(()=>{try{$('gn').focus()}catch{}},60)})}
+
+function openDeposit(g){
+  sheet(`<div class="grab"></div><h2>${esc(g.name)}</h2>
+  <p class="mu small" style="margin:0">เก็บแล้ว ฿${fmt(g.saved)} จาก ฿${fmt(g.target)}${g.done?'':` · ต้องเก็บเดือนละ ฿${fmt(g.monthly||g.remaining)}`}</p>
+  <div class="amtbox"><span>฿</span><input id="am" class="amt" inputmode="decimal" placeholder="0.00" autocomplete="off" aria-label="จำนวนเงิน"></div>
+  <p class="mu small" style="text-align:center;margin:0">เป็นการบันทึกยอดที่ตั้งเก็บไว้สำหรับเป้าหมายนี้ ไม่ได้ตัดยอดในบัญชี</p>
+  ${errBox}<div class="row2"><button class="btn" id="dpi">ฝากเข้าเป้าหมาย</button><button class="btn ghost" id="dpo">ถอนออก</button></div>`,()=>{
+    const go=(dir)=>(btn)=>run(btn,async()=>{const v=cleanAmt($('am').value);
+      if(!moneyOk(v)||Number(v)<=0)throw Error('ใส่จำนวนเงินให้ถูกต้อง');
+      const r=await api(`/api/goals/${g.id}/deposit`,'POST',{amount:v,direction:dir});closeSheet();toast(r.done&&dir==='IN'?'🎉 เก็บครบตามเป้าแล้ว':dir==='IN'?'ฝากเข้าเป้าหมายแล้ว':'ถอนออกแล้ว');render()});
+    $('dpi').onclick=()=>go('IN')($('dpi'));$('dpo').onclick=()=>go('OUT')($('dpo'));
+    setTimeout(()=>{try{$('am').focus()}catch{}},60)})}
+
 function openSettings(){
   sheet(`<div class="grab"></div><h2>บัญชีผู้ใช้</h2><p class="mu" style="margin:0 0 4px">${esc(S.email)}</p>
   <p class="mu small" style="margin:0 0 18px">ข้อมูลของคุณแยกจากผู้ใช้คนอื่น มีแต่คุณที่มองเห็น</p>
@@ -595,17 +715,17 @@ async function render(){
   const tok=++S.tok,v=$('v');
   document.querySelectorAll('.nv a').forEach(a=>a.classList.toggle('on',a.dataset.t===S.tab));
   const sig=S.tab+'/'+(S.sub||'');if(S.sig!==sig){S.sig=sig;v.innerHTML='<div class="load">กำลังโหลด…</div>';scrollTo(0,0)}
-  try{const view=S.tab==='list'?vList:S.tab==='bills'?vBills:S.tab==='reports'?vReports:S.tab==='accts'?(S.sub?vStmt:vAccts):vHome;
+  try{const view=S.tab==='list'?vList:S.tab==='bills'?vBills:S.tab==='goals'?vGoals:S.tab==='reports'?vReports:S.tab==='accts'?(S.sub?vStmt:vAccts):vHome;
     const o=await view();if(tok!==S.tok)return;v.innerHTML=o.html;o.mount&&o.mount()}
   catch(e){if(tok!==S.tok)return;v.innerHTML=`<div class="empty"><b>โหลดข้อมูลไม่ได้</b>${esc(e.message)}<button class="btn ghost" data-retry>ลองใหม่</button></div>`}}
 function route(){
-  const h=location.hash.replace(/^#\/?/,'').split('/'),tab=['home','list','bills','accts','reports'].includes(h[0])?h[0]:'home';
+  const h=location.hash.replace(/^#\/?/,'').split('/'),tab=['home','list','bills','accts','goals','reports'].includes(h[0])?h[0]:'home';
   const sub=tab==='accts'&&/^[0-9a-f-]{36}$/i.test(h[1]||'')?h[1]:null;
   if(sub!==S.sub)S.mAcct=cur();S.tab=tab;S.sub=sub;closeSheet();render()}
 addEventListener('hashchange',()=>{if(!$('app').classList.contains('hide'))route()});
 
-$('nvi').innerHTML=`<a href="#/home" data-t="home">${I.home}<span>ภาพรวม</span></a><a href="#/list" data-t="list">${I.list}<span>รายการ</span></a>
-<button id="add" aria-label="เพิ่มรายการ">${I.plus}</button><a href="#/bills" data-t="bills">${I.bills}<span>บิลประจำ</span></a><a href="#/accts" data-t="accts">${I.wallet}<span>บัญชี</span></a><a href="#/reports" data-t="reports">${I.list}<span>รายงาน</span></a>`;
+$('nvi').innerHTML=`<a href="#/home" data-t="home">${I.home}<span>ภาพรวม</span></a><a href="#/list" data-t="list">${I.list}<span>รายการ</span></a><a href="#/bills" data-t="bills">${I.bills}<span>บิลประจำ</span></a>
+<button id="add" aria-label="เพิ่มรายการ">${I.plus}</button><a href="#/accts" data-t="accts">${I.wallet}<span>บัญชี</span></a><a href="#/goals" data-t="goals">${I.goal}<span>เป้าหมาย</span></a><a href="#/reports" data-t="reports">${I.list}<span>รายงาน</span></a>`;
 $('add').onclick=()=>openAdd(S.tab==='list'&&S.seg==='INCOME'?'INCOME':'EXPENSE');
 $('v').addEventListener('click',e=>{const g=s=>e.target.closest(s);let x;
   if(x=g('[data-m]')){S[x.dataset.m]=shift(S[x.dataset.m],+x.dataset.d);render();return}
@@ -614,6 +734,10 @@ $('v').addEventListener('click',e=>{const g=s=>e.target.closest(s);let x;
   if(x=g('[data-bill]')){openBill([...S.bills.values()].find(v=>v.id===x.dataset.bill));return}
   if(g('[data-newbill]')){openBill();return}
   if(g('[data-newacct]')){openAcct();return}
+  if(g('[data-limit]')){openLimit(S.limit);return}
+  if(g('[data-newgoal]')){openGoal();return}
+  if(x=g('[data-gedit]')){const gg=S.goals.get(x.dataset.gedit);gg&&openGoal(gg);return}
+  if(x=g('[data-gdep]')){const gg=S.goals.get(x.dataset.gdep);gg&&openDeposit(gg);return}
   if(g('[data-me]')){openSettings();return}
   if(g('[data-retry]'))render()});
 

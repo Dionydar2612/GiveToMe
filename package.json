@@ -5,7 +5,7 @@
   "scripts": {
     "test": "vitest run",
     "build": "prisma generate && tsc",
-    "db:prepare": "prisma db execute --schema prisma/schema.prisma --file prisma/migrations/20261030_safe_add_recurring_bills/migration.sql && prisma db execute --schema prisma/schema.prisma --file prisma/migrations/20261030_recurring_schedule_reports.sql",
+    "db:prepare": "prisma db execute --schema prisma/schema.prisma --file prisma/migrations/20261030_safe_add_recurring_bills/migration.sql && prisma db execute --schema prisma/schema.prisma --file prisma/migrations/20261030_recurring_schedule_reports.sql && prisma db execute --schema prisma/schema.prisma --file prisma/migrations/20261103_spending_limit_goals.sql",
     "start": "npm run db:prepare && node dist/server.js"
   },
   "dependencies": {

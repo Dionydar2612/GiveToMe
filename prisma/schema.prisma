@@ -138,12 +138,29 @@ model Budget {
   @@unique([userId, categoryId, periodStart])
 }
 
+// เป้าหมายการออม: เก็บเงินซื้อของ/ทำสิ่งต่าง ๆ — คำนวณว่าต้องเก็บเดือนละเท่าไรจาก target, saved และ deadline
 model SavingsGoal {
-  id        String  @id @default(uuid())
+  id        String   @id @default(uuid())
   userId    String
   name      String
-  target    Decimal @db.Decimal(14, 2)
+  target    Decimal  @db.Decimal(14, 2)
   accountId String?
+  deadline  DateTime? @db.Date
+  saved     Decimal  @default(0) @db.Decimal(14, 2)
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+}
+
+// ลิมิตใช้จ่ายรายวัน (1 แถวต่อผู้ใช้) — startDate คือวันแรกที่เริ่มนับ (เวลาไทย) ใช้คำนวณยอดเกินที่ยกไปหักวันถัดไป
+model SpendingLimit {
+  userId       String   @id
+  dailyLimit   Decimal  @db.Decimal(14, 2)
+  startDate    DateTime @db.Date
+  includeBills Boolean  @default(false)
+  active       Boolean  @default(true)
+  updatedAt    DateTime @default(now()) @updatedAt
 }
 
 model AuditLog {

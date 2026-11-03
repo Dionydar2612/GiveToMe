@@ -6,6 +6,7 @@ import path from 'node:path';
 import fs from 'node:fs';
 import {Decimal} from 'decimal.js';
 import {balance,totals,statement,type Tx} from './ledger.js';
+import {toSatang,fromSatang,bangkokDay,clampStart,limitStatus,goalPlan,planNew,type LimitDay,type GoalPlan} from './planning.js';
 
 const prisma=new PrismaClient();
 const prod=process.env.NODE_ENV==='production';
@@ -230,6 +231,105 @@ app.get('/api/summary',auth,wrap(async(q,r)=>{
     transactions:allRows.slice(0,100).map(t=>({id:t.id,date:dk(t.occurredAt),title:t.title,type:t.type,amount:t.amount.toString(),category:t.category,note:t.note,
       fromAccount: t.fromAccountId?accountNames.get(t.fromAccountId)??'บัญชีที่ไม่พบ':null,toAccount:t.toAccountId?accountNames.get(t.toAccountId)??'บัญชีที่ไม่พบ':null,status:t.status})),
     top:rows.filter(t=>t.type==='EXPENSE').sort((x,y)=>+y.amount-+x.amount).slice(0,5).map(t=>({title:t.title,amount:t.amount.toString(),category:t.category,note:t.note,date:dk(t.occurredAt)}))});}));
+
+// ---------- ลิมิตใช้จ่ายรายวัน: ใช้เกินวันนี้ → ส่วนที่เกินถูกหักจากวงเงินวันถัดไป ----------
+// นับเฉพาะรายจ่าย (EXPENSE) ที่ POSTED ตามวันเวลาไทย · ไม่นับหมวด "เงินออม" · ไม่นับบิลประจำ เว้นแต่ผู้ใช้เลือกนับ
+const SAVING_CATEGORY='เงินออม';
+const bangkokMidnight=(k:string)=>new Date(Date.parse(k+'T00:00:00.000Z')-7*36e5);
+const dayDate=(k:string)=>new Date(k+'T00:00:00.000Z');
+const dayJson=(d:LimitDay)=>({date:d.date,spent:fromSatang(d.spent),carried:fromSatang(d.carried),allowance:fromSatang(d.allowance),
+  remaining:fromSatang(d.remaining),over:fromSatang(d.over),nextCarried:fromSatang(d.nextCarried)});
+async function limitReport(userId:string){
+  const cfg=await prisma.spendingLimit.findUnique({where:{userId}});
+  if(!cfg||!cfg.active)return{enabled:false as const};
+  const today=bangkokDay(new Date()),start=cfg.startDate.toISOString().slice(0,10),from=clampStart(start,today),limit=toSatang(cfg.dailyLimit.toString());
+  const rows=await prisma.transaction.findMany({where:{userId,status:'POSTED',type:'EXPENSE',occurredAt:{gte:bangkokMidnight(from)}},
+    select:{amount:true,category:true,billOccurrenceId:true,occurredAt:true}});
+  const spent:Record<string,number>={};
+  for(const t of rows){
+    if(t.category===SAVING_CATEGORY)continue;
+    if(!cfg.includeBills&&t.billOccurrenceId)continue;
+    const k=bangkokDay(t.occurredAt);spent[k]=(spent[k]||0)+toSatang(t.amount.toString());
+  }
+  const st=limitStatus(limit,start,today,spent);
+  return{enabled:true as const,dailyLimit:fromSatang(limit),includeBills:cfg.includeBills,startDate:start,
+    today:dayJson(st.today),tomorrow:{carried:fromSatang(st.tomorrow.carried),allowance:fromSatang(st.tomorrow.allowance)},
+    recent:st.rows.slice(-7).reverse().map(dayJson)};
+}
+app.get('/api/limit',auth,wrap(async(q,r)=>r.json(await limitReport(uid(q)))));
+app.put('/api/limit',auth,needJson,wrap(async(q,r)=>{
+  const b=z.object({dailyLimit:money.refine(v=>Number(v)>0,'วงเงินต้องมากกว่า 0'),includeBills:z.boolean().default(false)}).parse(q.body);
+  const userId=uid(q),today=bangkokDay(new Date()),old=await prisma.spendingLimit.findUnique({where:{userId}});
+  // เปลี่ยนวงเงิน/เงื่อนไข = เริ่มนับใหม่จากวันนี้ (ไม่เอาวงเงินใหม่ไปคำนวณย้อนหลัง) ; บันทึกซ้ำค่าเดิมไม่ล้างยอดค้าง
+  const changed=!old||!old.active||toSatang(old.dailyLimit.toString())!==toSatang(b.dailyLimit)||old.includeBills!==b.includeBills;
+  await prisma.$transaction(async db=>{
+    const n=await db.spendingLimit.upsert({where:{userId},
+      create:{userId,dailyLimit:b.dailyLimit,includeBills:b.includeBills,active:true,startDate:dayDate(today)},
+      update:{dailyLimit:b.dailyLimit,includeBills:b.includeBills,active:true,...(changed?{startDate:dayDate(today)}:{})}});
+    await db.auditLog.create({data:{userId,entity:'spendingLimit',entityId:userId,
+      ...(old?{oldValue:{dailyLimit:old.dailyLimit.toString(),includeBills:old.includeBills,active:old.active}}:{}),
+      newValue:{dailyLimit:n.dailyLimit.toString(),includeBills:n.includeBills,active:n.active}}});});
+  r.json(await limitReport(userId));}));
+app.delete('/api/limit',auth,wrap(async(q,r)=>{ // ปิดลิมิต (เก็บค่าไว้ ไม่ลบแถว)
+  await prisma.spendingLimit.updateMany({where:{userId:uid(q)},data:{active:false}});r.json({enabled:false});}));
+
+// ---------- เป้าหมายการออม: คำนวณยอดที่ต้องเก็บต่อเดือนจากราคา/เงินที่เก็บแล้ว/เวลาที่เหลือ ----------
+// หมายเหตุ: "saved" คือยอดที่ผู้ใช้ตั้งไว้สำหรับเป้าหมายนี้ ไม่ได้ตัดยอดในบัญชี
+const positive=money.refine(v=>Number(v)>0,'ต้องมากกว่า 0');
+const goalIn=z.object({name:z.string().trim().min(1).max(80),target:positive,saved:money.optional(),accountId:z.string().uuid().nullable().optional(),
+  mode:z.enum(['MONTHS','MONTHLY']).default('MONTHS'),months:z.number().int().min(1).max(600).optional(),monthly:positive.optional()})
+  .refine(b=>b.mode==='MONTHS'?b.months!==undefined:b.monthly!==undefined,'ระบุจำนวนเดือนหรือยอดที่เก็บได้ต่อเดือน');
+const planJson=(p:GoalPlan)=>({remaining:fromSatang(p.remaining),pct:p.pct,done:p.done,overdue:p.overdue,monthsLeft:p.monthsLeft,
+  monthly:p.monthly===null?null:fromSatang(p.monthly),weekly:p.weekly===null?null:fromSatang(p.weekly),daily:p.daily===null?null:fromSatang(p.daily)});
+const goalJson=(g:{id:string;name:string;target:Prisma.Decimal;saved:Prisma.Decimal;deadline:Date|null;accountId:string|null;createdAt:Date})=>{
+  const deadline=g.deadline?g.deadline.toISOString().slice(0,10):null;
+  return{id:g.id,name:g.name,target:fromSatang(toSatang(g.target.toString())),saved:fromSatang(toSatang(g.saved.toString())),deadline,accountId:g.accountId,
+    ...planJson(goalPlan(toSatang(g.target.toString()),toSatang(g.saved.toString()),deadline,bangkokDay(new Date())))};};
+app.get('/api/goals',auth,wrap(async(q,r)=>{
+  const rows=await prisma.savingsGoal.findMany({where:{userId:uid(q),active:true},orderBy:{createdAt:'asc'}});
+  const items=rows.map(goalJson);
+  r.json({items,monthlyTotal:fromSatang(items.reduce((s,g)=>s+(g.monthly?toSatang(g.monthly):0),0))});}));
+// ดูตัวอย่างแผนก่อนบันทึก (ใช้สูตรเดียวกับตอนบันทึกจริง)
+app.get('/api/goals/plan',auth,wrap(async(q,r)=>{
+  const b=z.object({target:positive,saved:money.default('0'),mode:z.enum(['MONTHS','MONTHLY']).default('MONTHS'),
+    months:z.coerce.number().int().min(1).max(600).optional(),monthly:positive.optional()}).parse(q.query);
+  if(b.mode==='MONTHS'?b.months===undefined:b.monthly===undefined)return void r.status(400).json({error:'ระบุจำนวนเดือนหรือยอดที่เก็บได้ต่อเดือน'});
+  const p=planNew(toSatang(b.target),toSatang(b.saved),b.mode,b.months,b.monthly?toSatang(b.monthly):undefined,bangkokDay(new Date()));
+  r.json({months:p.months,deadline:p.deadline,...planJson(p.plan)});}));
+app.post('/api/goals',auth,needJson,wrap(async(q,r)=>{
+  const b=goalIn.parse(q.body),userId=uid(q);
+  if(b.accountId&&!await ownsAccounts(userId,[b.accountId]))return void r.status(404).json({error:'ไม่พบบัญชี'});
+  const saved=b.saved??'0',p=planNew(toSatang(b.target),toSatang(saved),b.mode,b.months,b.monthly?toSatang(b.monthly):undefined,bangkokDay(new Date()));
+  const g=await prisma.$transaction(async db=>{
+    const g=await db.savingsGoal.create({data:{userId,name:b.name,target:b.target,saved,deadline:dayDate(p.deadline),accountId:b.accountId??null}});
+    await db.auditLog.create({data:{userId,entity:'savingsGoal',entityId:g.id,newValue:goalJson(g) as unknown as Prisma.InputJsonValue}});return g;});
+  r.status(201).json(goalJson(g));}));
+app.put('/api/goals/:id',auth,needJson,wrap(async(q,r)=>{
+  const b=goalIn.parse(q.body),userId=uid(q),id=z.string().uuid().parse(q.params.id);
+  if(b.accountId&&!await ownsAccounts(userId,[b.accountId]))return void r.status(404).json({error:'ไม่พบบัญชี'});
+  const out=await prisma.$transaction(async db=>{
+    const old=await db.savingsGoal.findFirst({where:{id,userId,active:true}});if(!old)return null;
+    // แก้ไข = ตั้งแผนใหม่นับจากวันนี้ โดยคงยอดที่เก็บแล้วไว้ (แก้ยอดที่เก็บแล้วใช้ปุ่มฝาก/ถอน)
+    const p=planNew(toSatang(b.target),toSatang(old.saved.toString()),b.mode,b.months,b.monthly?toSatang(b.monthly):undefined,bangkokDay(new Date()));
+    const n=await db.savingsGoal.update({where:{id},data:{name:b.name,target:b.target,deadline:dayDate(p.deadline),...(b.accountId!==undefined?{accountId:b.accountId}:{})}});
+    await db.auditLog.create({data:{userId,entity:'savingsGoal',entityId:id,oldValue:goalJson(old) as unknown as Prisma.InputJsonValue,newValue:goalJson(n) as unknown as Prisma.InputJsonValue}});return n;});
+  out?r.json(goalJson(out)):r.status(404).json({error:'ไม่พบเป้าหมาย'});}));
+app.post('/api/goals/:id/deposit',auth,needJson,wrap(async(q,r)=>{
+  const b=z.object({amount:positive,direction:z.enum(['IN','OUT']).default('IN')}).parse(q.body),userId=uid(q),id=z.string().uuid().parse(q.params.id);
+  const out=await prisma.$transaction(async db=>{
+    // ปรับยอดแบบ atomic ในคำสั่งเดียว (ไม่อ่านแล้วเขียน) กันกดซ้ำพร้อมกัน และถอนเกินยอดที่มีไม่ได้
+    const n=await db.savingsGoal.updateMany({where:{id,userId,active:true,...(b.direction==='OUT'?{saved:{gte:b.amount}}:{})},
+      data:{saved:b.direction==='IN'?{increment:b.amount}:{decrement:b.amount}}});
+    if(!n.count)return null;
+    const g=await db.savingsGoal.findFirst({where:{id,userId}});
+    await db.auditLog.create({data:{userId,entity:'savingsGoalDeposit',entityId:id,newValue:{direction:b.direction,amount:b.amount,saved:g!.saved.toString()}}});return g;});
+  if(!out){const exists=await prisma.savingsGoal.count({where:{id,userId,active:true}});
+    return void r.status(exists?400:404).json({error:exists?'ยอดที่เก็บไว้ไม่พอให้ถอน':'ไม่พบเป้าหมาย'});}
+  r.json(goalJson(out!));}));
+app.delete('/api/goals/:id',auth,wrap(async(q,r)=>{ // เลิกเป้าหมาย (ซ่อน ไม่ลบข้อมูล)
+  const userId=uid(q),id=z.string().uuid().parse(q.params.id);
+  const n=await prisma.savingsGoal.updateMany({where:{id,userId,active:true},data:{active:false}});
+  n.count?r.json({ok:true}):r.status(404).json({error:'ไม่พบเป้าหมาย'});}));
 
 // Export CSV กัน formula injection
 const csvCell=(v:unknown)=>{let s=String(v??'');if(/^[=+\-@\t\r]/.test(s))s="'"+s;return '"'+s.replace(/"/g,'""')+'"';};

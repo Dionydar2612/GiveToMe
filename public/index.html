@@ -9,6 +9,9 @@
 <meta name="theme-color" content="#0D100E" media="(prefers-color-scheme: dark)">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Givetome">
+<link rel="icon" href="/favicon.ico" sizes="any">
+<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png">
+<link rel="icon" type="image/png" sizes="48x48" href="/favicon-48.png">
 <link rel="apple-touch-icon" href="/icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -141,8 +144,10 @@ dialog.sheet::backdrop{background:rgba(8,12,10,.5)}
 
 /* ---------- auth ---------- */
 .authbox{max-width:380px;margin:0 auto;padding:12vh 24px 40px}
-.brand{font-size:32px;font-weight:600;letter-spacing:-.02em;line-height:1.2}
-.tag{margin:2px 0 28px;color:var(--mu)}
+.logo{display:block;width:min(240px,70%);height:auto;margin:0 auto 8px;mix-blend-mode:multiply}
+@media(prefers-color-scheme:dark){.logo{mix-blend-mode:normal;background:#fff;border-radius:28px;padding:10px}}
+.hlogo{width:36px;height:36px;flex:none;border-radius:9px}
+.tag{margin:2px 0 28px;color:var(--mu);text-align:center}
 #af .btn{margin-top:18px}
 .hint{font-size:13px;color:var(--mu);margin:8px 0 0}
 
@@ -159,7 +164,7 @@ dialog.sheet::backdrop{background:rgba(8,12,10,.5)}
 
 <section id="auth" class="hide">
   <div class="authbox">
-    <div class="brand">Givetome</div>
+    <img class="logo" src="/logo.png" alt="Givetome" width="240" height="242">
     <p class="tag">สมุดบัญชีส่วนตัว</p>
     <div class="seg" id="aseg"><button type="button" data-r="0" class="on">เข้าสู่ระบบ</button><button type="button" data-r="1">สร้างบัญชี</button></div>
     <form id="af" novalidate>
@@ -262,7 +267,7 @@ const moneyOk=s=>/^\d{1,12}(\.\d{1,2})?$/.test(s);
 const cleanAmt=s=>String(s).replace(/[,\s฿]/g,'');
 
 /* ====================== shared view parts ====================== */
-const head=(t,sub='',back='')=>`<header class="top">${back?`<a class="ic flat" href="${back}" aria-label="กลับ">${I.left}</a>`:''}<div class="tt"><h1>${esc(t)}</h1>${sub?`<div class="sub">${esc(sub)}</div>`:''}</div><button class="ic" data-me aria-label="บัญชีผู้ใช้">${I.user}</button></header>`;
+const head=(t,sub='',back='',logo=false)=>`<header class="top">${logo?'<img class="hlogo" src="/logo-mark.png" alt="Givetome" width="36" height="36">':''}${back?`<a class="ic flat" href="${back}" aria-label="กลับ">${I.left}</a>`:''}<div class="tt"><h1>${esc(t)}</h1>${sub?`<div class="sub">${esc(sub)}</div>`:''}</div><button class="ic" data-me aria-label="บัญชีผู้ใช้">${I.user}</button></header>`;
 const monthBar=(o,id)=>`<div class="mon"><button class="ic flat" data-m="${id}" data-d="-1" aria-label="เดือนก่อนหน้า">${I.left}</button><b>${mlabel(o)}</b><button class="ic flat" data-m="${id}" data-d="1" aria-label="เดือนถัดไป">${I.right}</button></div>`;
 
 const dl=k=>new Date(k+'T00:00:00').toLocaleDateString('th-TH',{day:'numeric',month:'short',year:'2-digit'});
@@ -307,7 +312,7 @@ async function vHome(){
   const gActive=gl?gl.items.filter(g=>!g.done):[];
   const goalCard=gl&&gl.items.length?`<a class="card" href="#/goals"><div class="pair"><div><div class="lb">เป้าหมายการออม</div><div class="v">${gl.items.length} รายการ</div></div><div><div class="lb">${gActive.length?'ต้องเก็บเดือนนี้':'สถานะ'}</div><div class="v ${gActive.length?'':'pos'}">${gActive.length?'฿'+fmt(gl.monthlyTotal):'ครบทุกเป้าหมาย'}</div></div></div></a>`
     :`<a class="card" href="#/goals"><b>เป้าหมายการออม</b><p class="mu small">อยากซื้อของราคาเท่านี้ ต้องเก็บเดือนละเท่าไร ให้ระบบคำนวณให้</p><span class="pos small">ตั้งเป้าหมายแรก</span></a>`;
-  return{html:`${head('ภาพรวม',today)}
+  return{html:`${head('ภาพรวม',today,'',true)}
   <div class="hero"><div class="lb">ยอดเงินรวมทุกบัญชี</div><div><span class="cur">฿</span>${big(fc(total))}</div></div>
   ${limitCard(lim)}
   ${S.accts.length?'':`<div class="card"><b>เริ่มต้นใช้งาน</b><p class="mu small">เพิ่มบัญชีแรก เช่น เงินสดหรือบัญชีธนาคาร แล้วกด + เพื่อบันทึกรายรับรายจ่าย</p><button class="btn" data-newacct>เพิ่มบัญชี</button></div>`}
